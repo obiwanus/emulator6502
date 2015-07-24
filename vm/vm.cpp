@@ -31,7 +31,49 @@ DEBUGDrawRectangle(int X, int Y, int Width, int Height, u32 Color)
 }
 
 
+internal void
+MachineTick()
+{
+    if (GlobalRect.Width == 0)
+    {
+        // Init
+        GlobalRect.X = GlobalRect.Y = 50;
+        GlobalRect.dX = GlobalRect.dY = 1;
+        GlobalRect.Width = 10;
+        GlobalRect.Color = 0x00aacc00;
+    }
 
+    DEBUGDrawRectangle(GlobalRect.X, GlobalRect.Y, GlobalRect.Width,
+                       GlobalRect.Width, 0x00000000);
+
+    GlobalRect.X += GlobalRect.dX;
+    GlobalRect.Y += GlobalRect.dY;
+
+    if (GlobalRect.X < 0)
+    {
+        GlobalRect.X = 0;
+        GlobalRect.dX = -GlobalRect.dX;
+    }
+    if (GlobalRect.Y < 0)
+    {
+        GlobalRect.Y = 0;
+        GlobalRect.dY = -GlobalRect.dY;
+    }
+    if (GlobalRect.X > SCREEN_WIDTH - GlobalRect.Width)
+    {
+        GlobalRect.X = SCREEN_WIDTH - GlobalRect.Width;
+        GlobalRect.dX = -GlobalRect.dX;
+    }
+    if (GlobalRect.Y > SCREEN_HEIGHT - GlobalRect.Width)
+    {
+        GlobalRect.Y = SCREEN_HEIGHT - GlobalRect.Width;
+        GlobalRect.dY = -GlobalRect.dY;
+    }
+
+    DEBUGDrawRectangle(GlobalRect.X, GlobalRect.Y, GlobalRect.Width,
+                       GlobalRect.Width, GlobalRect.Color);
+
+}
 
 
 

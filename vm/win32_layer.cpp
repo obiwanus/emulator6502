@@ -32,57 +32,6 @@ Win32UpdateWindow(HDC hdc)
 }
 
 
-DWORD WINAPI
-MachineTick(LPVOID lpParam)
-{
-    if (GlobalRect.Width == 0)
-    {
-        // Init
-        GlobalRect.X = GlobalRect.Y = 50;
-        GlobalRect.dX = GlobalRect.dY = 1;
-        GlobalRect.Width = 10;
-        GlobalRect.Color = 0x00aacc00;
-    }
-
-    while (GlobalRunning)
-    {
-        DEBUGDrawRectangle(GlobalRect.X, GlobalRect.Y, GlobalRect.Width,
-                       GlobalRect.Width, 0x00000000);
-
-        GlobalRect.X += GlobalRect.dX;
-        GlobalRect.Y += GlobalRect.dY;
-
-        if (GlobalRect.X < 0)
-        {
-            GlobalRect.X = 0;
-            GlobalRect.dX = -GlobalRect.dX;
-        }
-        if (GlobalRect.Y < 0)
-        {
-            GlobalRect.Y = 0;
-            GlobalRect.dY = -GlobalRect.dY;
-        }
-        if (GlobalRect.X > SCREEN_WIDTH - GlobalRect.Width)
-        {
-            GlobalRect.X = SCREEN_WIDTH - GlobalRect.Width;
-            GlobalRect.dX = -GlobalRect.dX;
-        }
-        if (GlobalRect.Y > SCREEN_HEIGHT - GlobalRect.Width)
-        {
-            GlobalRect.Y = SCREEN_HEIGHT - GlobalRect.Width;
-            GlobalRect.dY = -GlobalRect.dY;
-        }
-
-        DEBUGDrawRectangle(GlobalRect.X, GlobalRect.Y, GlobalRect.Width,
-                           GlobalRect.Width, GlobalRect.Color);
-
-        Sleep(30);
-    }
-
-    return 0;
-}
-
-
 LRESULT CALLBACK
 Win32WindowProc(
     HWND hwnd,
@@ -125,6 +74,18 @@ Win32WindowProc(
 }
 
 
+DWORD WINAPI
+MachineThread(LPVOID lpParam)
+{
+    while (GlobalRunning)
+    {
+        MachineTick();
+        Sleep(30);
+    }
+    return 0;
+}
+
+
 int CALLBACK
 WinMain(HINSTANCE hInstance,
         HINSTANCE hPrevInstance,
@@ -164,6 +125,7 @@ WinMain(HINSTANCE hInstance,
             GlobalVideoMemory = GlobalMachineMemory;
 
             // Init bitmap
+            // TODO: Use real window size
             GlobalBitmapInfo.bmiHeader.biWidth = SCREEN_WIDTH;
             GlobalBitmapInfo.bmiHeader.biHeight = SCREEN_HEIGHT;
             GlobalBitmapInfo.bmiHeader.biSize = sizeof(GlobalBitmapInfo.bmiHeader);
@@ -172,7 +134,7 @@ WinMain(HINSTANCE hInstance,
             GlobalBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
             // Run the machine
-            HANDLE MainMachineThread =  CreateThread(0, 0, MachineTick, 0, 0, 0);
+            HANDLE MainMachineThread =  CreateThread(0, 0, MachineThread, 0, 0, 0);
 
             // Event loop
             while (GlobalRunning)
