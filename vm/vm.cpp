@@ -1,4 +1,5 @@
 
+// TODO: delete
 struct rect
 {
     int X;
@@ -10,6 +11,41 @@ struct rect
 };
 
 global rect GlobalRect;
+
+
+typedef union
+{
+    u64 all64;
+    struct
+    {
+        u32 high32;
+        u32 low32;
+    };
+} register64;
+
+
+struct cpu
+{
+    u64 sp;
+    u64 bp;
+
+    u64 cs;
+    u64 ds;
+    u64 ss;
+    u64 es;
+
+    u64 ip;
+    u64 flags;
+
+    // Multi purpose
+    register64 a;
+    register64 b;
+    register64 c;
+    register64 d;
+    register64 e;
+    register64 f;
+
+};
 
 
 internal void
