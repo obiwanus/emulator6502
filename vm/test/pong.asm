@@ -1,8 +1,13 @@
 ; The simplest pong game
 
-define  draw_cursor   $00
+define  draw_cursor     $00
 define  draw_cursor_h   $01
 
+; ball directions
+define  up    1
+define  down  2
+define  left  4
+define  right 8
 
   jsr init
 
@@ -26,7 +31,6 @@ init:
   ; Draw the separator
   lda #$0f
   sta draw_cursor ; set draw cursor x to the middle of the screen
-
 draw_separator:
   lda #$c  ; grey
   ldx #0
@@ -40,7 +44,6 @@ draw_separator:
   cmp #$6
   bne draw_separator ; continue until less than 6
   rts
-
 
 
 get_input:
