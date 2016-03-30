@@ -1,8 +1,7 @@
 ; The simplest pong game
 
-define  draw_cursor_l   $00
+define  draw_cursor   $00
 define  draw_cursor_h   $01
-define  draw_cursor     $0000
 
 
   jsr init
@@ -20,17 +19,28 @@ mainloop:
 init:
   ; Init draw cursor
   lda #0
-  sta draw_cursor_l
+  sta draw_cursor
   lda #$2
   sta draw_cursor_h
 
   ; Draw the separator
   lda #$0f
-  sta draw_cursor_l ; set draw cursor x to the middle of the screen
-  lda #$c
-init_draw_separator:
-  sta ($0000)
+  sta draw_cursor ; set draw cursor x to the middle of the screen
+
+draw_separator:
+  lda #$c  ; grey
+  ldx #0
+  sta (draw_cursor, x)  ; draw pixel
+  lda draw_cursor
+  adc #$40 ; step two pixels down
+  sta draw_cursor
+  bcc draw_separator ; continue until overflow
+  inc draw_cursor_h
+  lda draw_cursor_h
+  cmp #$6
+  bne draw_separator ; continue until less than 6
   rts
+
 
 
 get_input:
