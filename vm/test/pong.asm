@@ -22,7 +22,7 @@ mainloop:
   jsr draw_separator
   jsr draw_paddles
   jsr draw_ball
-  jsr spin_wheels
+  jsr sleep
   jmp mainloop
 
 
@@ -34,7 +34,7 @@ init:
   sta ball_h
   lda #left
   sta ball_dir_x
-  lda #down
+  lda #up
   sta ball_dir_y
   rts
 
@@ -60,6 +60,7 @@ move_ball_left:
   dec ball_l
   jmp move_ball_vert
 move_ball_right:
+  inc ball_l
   jmp move_ball_vert
 move_ball_vert:
   lda ball_dir_y
@@ -68,8 +69,21 @@ move_ball_vert:
   cmp #down
   beq move_ball_down
 move_ball_up:
+  lda ball_l
+  sbc #$20  ; pitch
+  sta ball_l
+  lda ball_h
+  sbc #0
+  sta ball_h
   jmp end_update
 move_ball_down:
+  lda ball_l
+  clc
+  adc #$20  ; pitch
+  sta ball_l
+  lda ball_h
+  adc #0
+  sta ball_h
   jmp end_update
 end_update:
   rts
@@ -89,6 +103,7 @@ draw_separator_loop:
   ldx #0
   sta (draw_cursor, x)  ; draw pixel
   lda draw_cursor
+  clc
   adc #$40 ; step two pixels down
   sta draw_cursor
   bcc draw_separator_loop ; continue until overflow
@@ -110,13 +125,11 @@ draw_ball:
   rts
 
 
-spin_wheels:
+sleep:
   ldx #0
-spinloop:
-  nop
-  nop
+sleep_loop:
   dex
-  bne spinloop
+  bne sleep_loop
   rts
 
 
