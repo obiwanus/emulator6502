@@ -7,10 +7,13 @@ define  up    1
 define  down  2
 define  left  4
 define  right 8
-define  ball_l      $02  ; screen location of the ball, low byte
-define  ball_h      $03  ; screen location of the ball, high byte
+define  ball_x      $02
+define  ball_y      $03
 define  ball_dir_x  $04
 define  ball_dir_y  $05
+define  ball_display    $06
+define  ball_display_h  $07
+define  screen_border   31
 
 
   jsr init
@@ -28,10 +31,10 @@ mainloop:
 
 init:
   ; Init ball
-  lda #$18
-  sta ball_l
-  lda #$03
-  sta ball_h
+  lda #24
+  sta ball_x
+  lda #10
+  sta ball_y
   lda #left
   sta ball_dir_x
   lda #up
@@ -48,20 +51,34 @@ update_paddles:
 
 
 update_ball:
+  jsr update_ball_drawing_position
   lda #0
   ldx #0
-  sta (ball_l, x)  ; erase ball
+  sta (ball_display, x)  ; erase
   lda ball_dir_x
   cmp #left
   beq move_ball_left
   cmp #right
   beq move_ball_right
 move_ball_left:
-  dec ball_l
+  dec ball_x
+  beq bounce_right
+  jmp move_ball_vert
+bounce_right:
+  lda #right
+  sta ball_dir_x
   jmp move_ball_vert
 move_ball_right:
-  inc ball_l
+  inc ball_x
+  lda ball_x
+  cmp #screen_border
+  beq bounce_left
   jmp move_ball_vert
+bounce_left:
+  lda #left
+  sta ball_dir_x
+  jmp move_ball_vert
+
 move_ball_vert:
   lda ball_dir_y
   cmp #up
@@ -69,21 +86,22 @@ move_ball_vert:
   cmp #down
   beq move_ball_down
 move_ball_up:
-  lda ball_l
-  sbc #$20  ; pitch
-  sta ball_l
-  lda ball_h
-  sbc #0
-  sta ball_h
+  dec ball_y
+  beq bounce_down
+  jmp end_update
+bounce_down:
+  lda #down
+  sta ball_dir_y
   jmp end_update
 move_ball_down:
-  lda ball_l
-  clc
-  adc #$20  ; pitch
-  sta ball_l
-  lda ball_h
-  adc #0
-  sta ball_h
+  inc ball_y
+  lda ball_y
+  cmp #screen_border
+  beq bounce_up
+  jmp end_update
+bounce_up:
+  lda #up
+  sta ball_dir_y
   jmp end_update
 end_update:
   rts
@@ -119,9 +137,34 @@ draw_paddles:
 
 
 draw_ball:
-  ldx #0
+  jsr update_ball_drawing_position
   lda #1
-  sta (ball_l, x)
+  ldx #0
+  sta (ball_display, x)
+  rts
+
+
+update_ball_drawing_position:
+  lda #2
+  sta ball_display_h
+  lda #0
+  sta ball_display
+  clc
+  adc ball_x
+  sta ball_display
+  ldx ball_y
+  beq update_ball_drawing_end
+adjust_y_loop:
+  lda ball_display
+  clc
+  adc #$20
+  sta ball_display
+  lda #0
+  adc ball_display_h
+  sta ball_display_h
+  dex
+  bne adjust_y_loop
+update_ball_drawing_end:
   rts
 
 
