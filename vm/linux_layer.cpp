@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  // usleep
 #include <time.h>
 #include <limits.h>
 
@@ -43,27 +42,12 @@ int main(int argc, char const *argv[]) {
                          NULL);
 
   XSelectInput(display, window,
-               ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask);
+               ExposureMask | KeyPressMask | KeyReleaseMask |
+               ButtonPressMask | StructureNotifyMask);
   XMapRaised(display, window);
 
   Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(display, window, &wmDeleteMessage, 1);
-
-  usleep(5000);  // 50 ms
-
-  // Init backbuffer
-  GameBackBuffer.MaxWidth = 2000;
-  GameBackBuffer.MaxHeight = 1500;
-  GameBackBuffer.BytesPerPixel = 4;
-
-  // @tmp
-  GameBackBuffer.Width = kWindowWidth;
-  GameBackBuffer.Height = kWindowHeight;
-
-  int BufferSize = GameBackBuffer.MaxWidth * GameBackBuffer.MaxHeight *
-                   GameBackBuffer.BytesPerPixel;
-
-  GameBackBuffer.Memory = malloc(BufferSize);
 
   Pixmap pixmap;
   GC gc;
@@ -81,11 +65,17 @@ int main(int argc, char const *argv[]) {
     //                        kWindowHeight, bitmap_pad, bytes_per_line);
 
     // TODO: find a way to do it with a newly created image
-    usleep(500000);
+
+    for (;;) {
+      XEvent e;
+      XNextEvent(display, &e);
+      if (e.type == MapNotify) break;
+    }
+
     gXImage = XGetImage(display, window, 0, 0, kWindowWidth, kWindowHeight,
                         AllPlanes, ZPixmap);
 
-    GameBackBuffer.Memory = (void *)gXImage->data;
+    // GameBackBuffer.Memory = (void *)gXImage->data;
 
     // u32 *Pixel = (u32 *)gXImage->data;
     // for (int i = 0; i < kWindowWidth * 700; i++) {
@@ -104,51 +94,7 @@ int main(int argc, char const *argv[]) {
     // Process events
     while (XPending(display)) {
       XEvent event;
-      KeySym key;
-      char buf[256];
-      player_input *Player1 = &NewInput->Player1;
-      player_input *Player2 = &NewInput->Player2;
-      char symbol = 0;
-      bool32 pressed = false;
-      bool32 released = false;
-      bool32 retriggered = false;
-
       XNextEvent(display, &event);
-
-      if (XLookupString(&event.xkey, buf, 255, &key, 0) == 1) {
-        symbol = buf[0];
-      }
-
-      // Process user input
-      if (event.type == KeyPress) {
-        printf("Key pressed\n");
-        pressed = true;
-      }
-
-      if (event.type == KeyRelease) {
-        if (XEventsQueued(display, QueuedAfterReading)) {
-          XEvent nev;
-          XPeekEvent(display, &nev);
-
-          if (nev.type == KeyPress && nev.xkey.time == event.xkey.time &&
-              nev.xkey.keycode == event.xkey.keycode) {
-            // Ignore. Key wasn't actually released
-            printf("Key release ignored\n");
-            XNextEvent(display, &event);
-            retriggered = true;
-          }
-        }
-
-        if (!retriggered) {
-          printf("Key released\n");
-          released = true;
-        }
-      }
-
-      if (pressed || released) {
-        if (key == XK_Escape) {
-          gRunning = false;
-        }
 
       // Close window message
       if (event.type == ClientMessage) {
@@ -157,11 +103,6 @@ int main(int argc, char const *argv[]) {
         }
       }
     }
-
-    bool32 RedrawLevel = false;
-
-    Game.UpdateAndRender(NewInput, &GameBackBuffer, &GameMemory, &gSoundOutput,
-                         RedrawLevel);
 
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
