@@ -11,6 +11,9 @@
 #include <limits.h>
 
 global bool gRunning;
+global void *gVideoMemory;
+
+#include "vm.cpp"
 
 global XImage *gXImage;
 
@@ -31,8 +34,8 @@ int main(int argc, char const *argv[]) {
   u32 border_color = WhitePixel(display, screen);
   u32 bg_color = BlackPixel(display, screen);
 
-  const int kWindowWidth = 1500;
-  const int kWindowHeight = 1000;
+  const int kWindowWidth = SCREEN_WIDTH;
+  const int kWindowHeight = SCREEN_HEIGHT;
 
   window = XCreateSimpleWindow(display, RootWindow(display, screen), 300, 300,
                                kWindowWidth, kWindowHeight, 0, border_color,
@@ -55,16 +58,6 @@ int main(int argc, char const *argv[]) {
 
   // Create x image
   {
-    // int depth = 32;
-    // int bitmap_pad = 32;
-    // int bytes_per_line = 0;
-    // int offset = 0;
-
-    // gXImage = XCreateImage(display, CopyFromParent, depth, ZPixmap, offset,
-    //                        (char *)GameBackBuffer.Memory, kWindowWidth,
-    //                        kWindowHeight, bitmap_pad, bytes_per_line);
-
-    // TODO: find a way to do it with a newly created image
 
     for (;;) {
       XEvent e;
@@ -75,16 +68,14 @@ int main(int argc, char const *argv[]) {
     gXImage = XGetImage(display, window, 0, 0, kWindowWidth, kWindowHeight,
                         AllPlanes, ZPixmap);
 
-    // GameBackBuffer.Memory = (void *)gXImage->data;
+    gVideoMemory = (void *)gXImage->data;
 
-    // u32 *Pixel = (u32 *)gXImage->data;
-    // for (int i = 0; i < kWindowWidth * 700; i++) {
-    //   *Pixel = 0x00FF00FF;
-    //   Pixel++;
-    // }
+    u32 *Pixel = (u32 *)gXImage->data;
+    for (int i = 0; i < kWindowWidth * 700; i++) {
+      *Pixel = 0x00FF00FF;
+      Pixel++;
+    }
 
-    // pixmap = XCreatePixmap(display, window, kWindowWidth,
-    //                        kWindowHeight, depth);
     gc = XCreateGC(display, window, 0, &gcvalues);
   }
 
