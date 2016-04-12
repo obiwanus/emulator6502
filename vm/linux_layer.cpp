@@ -1,4 +1,4 @@
-#include "loderunner_platform.h"
+#include "base.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -11,97 +11,11 @@
 #include <time.h>
 #include <limits.h>
 
-#include "loderunner.h"
+global bool gRunning;
 
-struct linux_game_code {
-  void *Library;
-  game_update_and_render *UpdateAndRender;
-  bool32 IsValid;
-};
-
-global bool GlobalRunning;
-
-global game_memory GameMemory;
-global game_offscreen_buffer GameBackBuffer;
-global platform_sound_output gSoundOutput;
 global XImage *gXImage;
 
-internal void LinuxGetExeDir(char *PathToExe) {
-  readlink("/proc/self/exe", PathToExe, PATH_MAX);
-
-  // Cut the file name
-  char *OnePastLastSlash = PathToExe;
-  for (char *Scan = PathToExe; *Scan; Scan++) {
-    if (*Scan == '/') {
-      OnePastLastSlash = Scan + 1;
-    }
-  }
-  *OnePastLastSlash = 0;
-}
-
-DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile) {
-  file_read_result Result = {};
-
-  char PathToExe[PATH_MAX];
-  LinuxGetExeDir(PathToExe);
-
-  char FilePath[PATH_MAX];
-  sprintf(FilePath, "%sdata/%s", PathToExe, Filename);
-
-  FILE *f = fopen(FilePath, "rb");
-  if (f == NULL) {
-    printf("Cannot open file: %s\n", Filename);
-    exit(1);
-  }
-
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET);
-
-  Result.MemorySize = fsize;
-  Result.Memory = malloc(fsize);
-  fread(Result.Memory, fsize, 1, f);
-  fclose(f);
-
-  return Result;
-}
-
-inline u64 LinuxGetWallClock() {
-  u64 result = 0;
-  struct timespec spec;
-
-  clock_gettime(CLOCK_MONOTONIC, &spec);
-  result = spec.tv_nsec;  // ns
-
-  return result;
-}
-
 int main(int argc, char const *argv[]) {
-  // Load game code
-  linux_game_code Game = {};
-  {
-    char path_to_exec[PATH_MAX];
-    char path_to_so[PATH_MAX];
-    readlink("/proc/self/exe", path_to_exec, PATH_MAX);
-    sprintf(path_to_so, "%s.so", path_to_exec);
-    Game.Library = dlopen(path_to_so, RTLD_NOW);
-    if (Game.Library != NULL) {
-      dlerror();  // clear error code
-      Game.UpdateAndRender =
-          (game_update_and_render *)dlsym(Game.Library, "GameUpdateAndRender");
-      char *err = dlerror();
-      if (err != NULL) {
-        Game.UpdateAndRender = GameUpdateAndRenderStub;
-        printf("Could not find GameUpdateAndRender: %s\n", err);
-      } else {
-        Game.IsValid = true;
-      }
-    }
-  }
-  if (!Game.IsValid) {
-    printf("Could not load game code\n");
-    exit(1);
-  }
 
   Display *display;
   Window window;
@@ -136,16 +50,6 @@ int main(int argc, char const *argv[]) {
   XSetWMProtocols(display, window, &wmDeleteMessage, 1);
 
   usleep(5000);  // 50 ms
-
-  // Init game memory
-  {
-    GameMemory.MemorySize = 1024 * 1024 * 1024;  // 1 Gigabyte
-    GameMemory.Start = malloc(GameMemory.MemorySize);
-    GameMemory.Free = GameMemory.Start;
-    GameMemory.IsInitialized = true;
-
-    GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
-  }
 
   // Init backbuffer
   GameBackBuffer.MaxWidth = 2000;
@@ -194,21 +98,9 @@ int main(int argc, char const *argv[]) {
     gc = XCreateGC(display, window, 0, &gcvalues);
   }
 
-  // Get space for inputs
-  game_input Input[2];
-  game_input *OldInput = &Input[0];
-  game_input *NewInput = &Input[1];
-  *NewInput = {};
+  gRunning = true;
 
-  // TODO: query monitor refresh rate
-  int target_fps = 60;
-  r32 target_nspf = 1.0e9f / (r32)target_fps;  // Target ms per frame
-
-  GlobalRunning = true;
-
-  u64 last_timestamp = LinuxGetWallClock();
-
-  while (GlobalRunning) {
+  while (gRunning) {
     // Process events
     while (XPending(display)) {
       XEvent event;
@@ -255,26 +147,13 @@ int main(int argc, char const *argv[]) {
 
       if (pressed || released) {
         if (key == XK_Escape) {
-          GlobalRunning = false;
-        } else if (key == XK_Left) {
-          Player1->Left.EndedDown = pressed;
-        } else if (key == XK_Right) {
-          Player1->Right.EndedDown = pressed;
-        } else if (key == XK_Up) {
-          Player1->Up.EndedDown = pressed;
-        } else if (key == XK_Down) {
-          Player1->Down.EndedDown = pressed;
-        } else if (key == XK_space) {
-          Player1->Fire.EndedDown = pressed;
-        } else if (symbol == 'x') {
-          Player1->Turbo.EndedDown = pressed;
+          gRunning = false;
         }
-      }
 
       // Close window message
       if (event.type == ClientMessage) {
         if (event.xclient.data.l[0] == wmDeleteMessage) {
-          GlobalRunning = false;
+          gRunning = false;
         }
       }
     }
@@ -284,45 +163,8 @@ int main(int argc, char const *argv[]) {
     Game.UpdateAndRender(NewInput, &GameBackBuffer, &GameMemory, &gSoundOutput,
                          RedrawLevel);
 
-    // Swap inputs
-    game_input *TmpInput = OldInput;
-    OldInput = NewInput;
-    NewInput = TmpInput;
-    *NewInput = {};  // zero everything
-
-    // Retain the EndedDown state
-    for (int p = 0; p < COUNT_OF(NewInput->Players); p++) {
-      player_input *OldPlayerInput = &OldInput->Players[p];
-      player_input *NewPlayerInput = &NewInput->Players[p];
-      for (int b = 0; b < COUNT_OF(OldPlayerInput->Buttons); b++) {
-        NewPlayerInput->Buttons[b].EndedDown =
-            OldPlayerInput->Buttons[b].EndedDown;
-      }
-    }
-
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
-
-    // Limit FPS
-    {
-      u64 current_timestamp = LinuxGetWallClock();
-      u64 ns_elapsed = LinuxGetWallClock() - last_timestamp;
-
-      if (ns_elapsed < target_nspf) {
-        timespec ts;
-        ts.tv_sec = 0;
-        ts.tv_nsec = target_nspf - ns_elapsed;  // time to sleep
-        clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
-
-        while (ns_elapsed < target_nspf) {
-          ns_elapsed = LinuxGetWallClock() - last_timestamp;
-        }
-      } else {
-        printf("Frame missed\n");
-      }
-
-      last_timestamp = LinuxGetWallClock();
-    }
   }
 
   XCloseDisplay(display);
