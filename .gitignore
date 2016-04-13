@@ -37,3 +37,7 @@ build/
 *.sublime-*
 *.pro
 *.pro.*
+*.creator*
+os.config
+os.files
+os.includes

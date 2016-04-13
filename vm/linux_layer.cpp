@@ -95,6 +95,9 @@ int main(int argc, char const *argv[]) {
       }
     }
 
+    MachineTick();
+
+
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
   }
