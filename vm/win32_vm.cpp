@@ -1,12 +1,8 @@
 #include "base.h"
 
-#define MEMORY_SIZE (1024 * 1024 * 1024)
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 768
-
-global void *GlobalMachineMemory;
-global void *GlobalVideoMemory;
-global volatile bool32 GlobalRunning;
+global void *gMachineMemory;
+global void *gVideoMemory;
+global volatile bool32 gRunning;
 
 #include "vm.cpp"
 
@@ -16,11 +12,11 @@ global volatile bool32 GlobalRunning;
 global BITMAPINFO GlobalBitmapInfo;
 
 internal void Win32UpdateWindow(HDC hdc) {
-  if (!GlobalVideoMemory) return;
+  if (!gVideoMemory) return;
 
-  StretchDIBits(hdc, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,  // dest
-                0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,       // src
-                GlobalVideoMemory, &GlobalBitmapInfo, DIB_RGB_COLORS, SRCCOPY);
+  StretchDIBits(hdc, 0, 0, kWindowWidth, kWindowHeight,  // dest
+                0, 0, kWindowWidth, kWindowHeight,       // src
+                gVideoMemory, &GlobalBitmapInfo, DIB_RGB_COLORS, SRCCOPY);
 }
 
 LRESULT CALLBACK
@@ -29,7 +25,7 @@ Win32WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
   switch (uMsg) {
     case WM_CLOSE: {
-      GlobalRunning = false;
+      gRunning = false;
     } break;
 
     case WM_PAINT: {
@@ -53,7 +49,7 @@ Win32WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 DWORD WINAPI MachineThread(LPVOID lpParam) {
-  while (GlobalRunning) {
+  while (gRunning) {
     MachineTick();
     Sleep(5);
   }
@@ -78,17 +74,20 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       // We're not going to release it as we use CS_OWNDC
       HDC hdc = GetDC(Window);
 
-      GlobalRunning = true;
+      gRunning = true;
 
       // Init memory
-      GlobalMachineMemory =
-          VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
-      GlobalVideoMemory = GlobalMachineMemory;
+      gMachineMemory = VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
+      gVideoMemory = gMachineMemory;
 
       // Init bitmap
-      // TODO: Use real window size
-      GlobalBitmapInfo.bmiHeader.biWidth = SCREEN_WIDTH;
-      GlobalBitmapInfo.bmiHeader.biHeight = SCREEN_HEIGHT;
+      RECT WindowRect = {};
+      GetClientRect(Window, &WindowRect);
+      kWindowWidth = WindowRect.right;
+      kWindowHeight = WindowRect.bottom;
+
+      GlobalBitmapInfo.bmiHeader.biWidth = kWindowWidth;
+      GlobalBitmapInfo.bmiHeader.biHeight = kWindowHeight;
       GlobalBitmapInfo.bmiHeader.biSize = sizeof(GlobalBitmapInfo.bmiHeader);
       GlobalBitmapInfo.bmiHeader.biPlanes = 1;
       GlobalBitmapInfo.bmiHeader.biBitCount = 32;
@@ -98,14 +97,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       HANDLE MainMachineThread = CreateThread(0, 0, MachineThread, 0, 0, 0);
 
       // Event loop
-      while (GlobalRunning) {
+      while (gRunning) {
         // Process messages
         MSG Message;
         while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE)) {
           // Get keyboard messages
           switch (Message.message) {
             case WM_QUIT: {
-              GlobalRunning = false;
+              gRunning = false;
             } break;
 
             case WM_SYSKEYDOWN:
@@ -118,7 +117,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
               bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
               if ((VKCode == VK_F4) && AltKeyWasDown) {
-                GlobalRunning = false;
+                gRunning = false;
               }
             } break;
 

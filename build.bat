@@ -15,7 +15,7 @@ pushd build
 @del /Q *.pdb > NUL 2> NUL
 @del /Q *.gmi > NUL 2> NUL
 
-cl %CommonCompilerFlags% ..\vm\win32_layer.cpp /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% ..\vm\win32_vm.cpp /link %CommonLinkerFlags%
 
 popd
 popd

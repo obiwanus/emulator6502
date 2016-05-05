@@ -1,5 +1,10 @@
+#define MEMORY_SIZE (1024 * 1024 * 1024)
 #define SCREEN_WIDTH 1500
 #define SCREEN_HEIGHT 1000
+
+// Must be filled with real client size
+global int kWindowWidth;
+global int kWindowHeight;
 
 
 // TODO: delete
@@ -17,7 +22,7 @@ global rect GlobalRect;
 internal void DEBUGDrawRectangle(int X, int Y, int Width, int Height,
                                  u32 Color) {
   int BytesPerPixel = 4;
-  int Pitch = SCREEN_WIDTH * BytesPerPixel;
+  int Pitch = kWindowWidth * BytesPerPixel;
   u8 *Row = (u8 *)gVideoMemory + Pitch * Y + X * BytesPerPixel;
 
   for (int pY = Y; pY < Y + Height; pY++) {
@@ -52,12 +57,12 @@ internal void MachineTick() {
     GlobalRect.Y = 0;
     GlobalRect.dY = -GlobalRect.dY;
   }
-  if (GlobalRect.X > SCREEN_WIDTH - GlobalRect.Width) {
-    GlobalRect.X = SCREEN_WIDTH - GlobalRect.Width;
+  if (GlobalRect.X > kWindowWidth - GlobalRect.Width) {
+    GlobalRect.X = kWindowWidth - GlobalRect.Width;
     GlobalRect.dX = -GlobalRect.dX;
   }
-  if (GlobalRect.Y > SCREEN_HEIGHT - GlobalRect.Width) {
-    GlobalRect.Y = SCREEN_HEIGHT - GlobalRect.Width;
+  if (GlobalRect.Y > kWindowHeight - GlobalRect.Width) {
+    GlobalRect.Y = kWindowHeight - GlobalRect.Width;
     GlobalRect.dY = -GlobalRect.dY;
   }
 
