@@ -11,7 +11,10 @@ global int kWindowHeight;
 
 
 internal void MachineTick() {
-
+  u8 *Pixel = gVideoMemory + 30 + 20 * SCREEN_WIDTH;
+  *Pixel++ = 1;
+  *Pixel++ = 2;
+  *Pixel++ = 3;
 }
 
 
