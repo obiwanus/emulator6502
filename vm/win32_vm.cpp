@@ -14,6 +14,38 @@ global BITMAPINFO GlobalBitmapInfo;
 internal void Win32UpdateWindow(HDC hdc) {
   if (!gVideoMemory) return;
 
+  // Copy data from the machine's video memory to our "display"
+  u8 *LeftTopSrcPixel = (u8 *)gMachineMemory + 0x0200;
+  u32 *LeftTopDestPixel = (u32 *)gVideoMemory;
+  int BytesPerPixel = 4;
+  int Pitch = SCREEN_WIDTH * BytesPerPixel;
+
+  for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (int x = 0; x < SCREEN_WIDTH; x++) {
+      u8 *SrcPixel = LeftTopSrcPixel + SCREEN_WIDTH * y + x;
+      u32 *DestPixel = LeftTopDestPixel + Pitch * y + x;  // TODO: PIXEL_SIZE > 1
+      u32 Value = 0;
+      switch (*SrcPixel) {
+        case 0: {
+          Value = 0x00000000;  // black
+        } break;
+        case 1: {
+          Value = 0x00FF0000;  // red
+        } break;
+        case 2: {
+          Value = 0x0000FF00;  // green
+        } break;
+        case 3: {
+          Value = 0x000000FF;  // blue
+        } break;
+        default: {
+          Value = 0x00CCCCCC;  // grey
+        } break;
+      }
+      *DestPixel = Value;
+    }
+  }
+
   StretchDIBits(hdc, 0, 0, kWindowWidth, kWindowHeight,  // dest
                 0, 0, kWindowWidth, kWindowHeight,       // src
                 gVideoMemory, &GlobalBitmapInfo, DIB_RGB_COLORS, SRCCOPY);
@@ -65,10 +97,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   WindowClass.lpszClassName = "VMWindowClass";
 
   if (RegisterClass(&WindowClass)) {
-    HWND Window = CreateWindow(WindowClass.lpszClassName, 0,
-                               WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_VISIBLE,
-                               CW_USEDEFAULT, CW_USEDEFAULT, SCREEN_WIDTH,
-                               SCREEN_HEIGHT, 0, 0, hInstance, 0);
+    HWND Window =
+        CreateWindow(WindowClass.lpszClassName, 0,
+                     WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_VISIBLE,
+                     CW_USEDEFAULT, CW_USEDEFAULT, SCREEN_WIDTH * PIXEL_SIZE,
+                     SCREEN_HEIGHT * PIXEL_SIZE, 0, 0, hInstance, 0);
 
     if (Window) {
       // We're not going to release it as we use CS_OWNDC
@@ -84,13 +117,17 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
       // Init memory
       gMachineMemory = VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
-      gVideoMemory =
-          (void *)((u8 *)gMachineMemory + MEMORY_SIZE -
-                   kWindowWidth * kWindowHeight * sizeof(u32) - 1024);
+
+
+      // TODO: Find out why not enough memory!
+
+
+      gVideoMemory = VirtualAlloc(0, 10 * SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u32),
+                                  MEM_COMMIT, PAGE_READWRITE);
 
       // Init bitmap
-      GlobalBitmapInfo.bmiHeader.biWidth = kWindowWidth;
-      GlobalBitmapInfo.bmiHeader.biHeight = kWindowHeight;
+      GlobalBitmapInfo.bmiHeader.biWidth = SCREEN_WIDTH;
+      GlobalBitmapInfo.bmiHeader.biHeight = SCREEN_HEIGHT;
       GlobalBitmapInfo.bmiHeader.biSize = sizeof(GlobalBitmapInfo.bmiHeader);
       GlobalBitmapInfo.bmiHeader.biPlanes = 1;
       GlobalBitmapInfo.bmiHeader.biBitCount = 32;
