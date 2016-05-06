@@ -74,18 +74,21 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       // We're not going to release it as we use CS_OWNDC
       HDC hdc = GetDC(Window);
 
-      gRunning = true;
-
-      // Init memory
-      gMachineMemory = VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
-      gVideoMemory = gMachineMemory;
-
-      // Init bitmap
+      // Real window size
       RECT WindowRect = {};
       GetClientRect(Window, &WindowRect);
       kWindowWidth = WindowRect.right;
       kWindowHeight = WindowRect.bottom;
 
+      gRunning = true;
+
+      // Init memory
+      gMachineMemory = VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
+      gVideoMemory =
+          (void *)((u8 *)gMachineMemory + MEMORY_SIZE -
+                   kWindowWidth * kWindowHeight * sizeof(u32) - 1024);
+
+      // Init bitmap
       GlobalBitmapInfo.bmiHeader.biWidth = kWindowWidth;
       GlobalBitmapInfo.bmiHeader.biHeight = kWindowHeight;
       GlobalBitmapInfo.bmiHeader.biSize = sizeof(GlobalBitmapInfo.bmiHeader);
@@ -130,7 +133,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
         // TODO: sleep on vblank
         Win32UpdateWindow(hdc);
-        Sleep(30);
+        Sleep(5);
       }
     }
   } else {
