@@ -1,12 +1,9 @@
-// 64 Kb
-#define MEMORY_SIZE 65536
-#define SCREEN_WIDTH 280
-#define SCREEN_HEIGHT 192
-#define PIXEL_SIZE 2
+// ================= Virtual 6502-based machine ==================
 
-// Must be filled with real client size
-global int kWindowWidth;
-global int kWindowHeight;
+global int const kMachineMemorySize = 65536;  // 64 Kb
+
+global int const kWindowWidth = 280;
+global int const kWindowHeight = 192;
 
 
 // TODO: delete ==================================================
@@ -23,7 +20,7 @@ global rect GlobalRect;
 
 internal void DEBUGDrawRectangle(int X, int Y, int Width, int Height,
                                  u8 Color) {
-  int Pitch = SCREEN_WIDTH;
+  int Pitch = kWindowWidth;
   u8 *Row = (u8 *)gVideoMemory + Pitch * Y + X;
 
   for (int pY = Y; pY < Y + Height; pY++) {
@@ -41,7 +38,7 @@ internal void MachineTick() {
     GlobalRect.X = GlobalRect.Y = 50;
     GlobalRect.dX = GlobalRect.dY = 1;
     GlobalRect.Width = 5;
-    GlobalRect.Color = 2;
+    GlobalRect.Color = 1;
   }
 
   // Erase
@@ -59,12 +56,12 @@ internal void MachineTick() {
     GlobalRect.Y = 0;
     GlobalRect.dY = -GlobalRect.dY;
   }
-  if (GlobalRect.X > SCREEN_WIDTH - GlobalRect.Width) {
-    GlobalRect.X = SCREEN_WIDTH - GlobalRect.Width;
+  if (GlobalRect.X > kWindowWidth - GlobalRect.Width) {
+    GlobalRect.X = kWindowWidth - GlobalRect.Width;
     GlobalRect.dX = -GlobalRect.dX;
   }
-  if (GlobalRect.Y > SCREEN_HEIGHT - GlobalRect.Width) {
-    GlobalRect.Y = SCREEN_HEIGHT - GlobalRect.Width;
+  if (GlobalRect.Y > kWindowHeight - GlobalRect.Width) {
+    GlobalRect.Y = kWindowHeight - GlobalRect.Width;
     GlobalRect.dY = -GlobalRect.dY;
   }
 
