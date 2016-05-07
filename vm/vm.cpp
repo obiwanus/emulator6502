@@ -2,7 +2,7 @@
 #define MEMORY_SIZE 65536
 #define SCREEN_WIDTH 280
 #define SCREEN_HEIGHT 192
-#define PIXEL_SIZE 1
+#define PIXEL_SIZE 2
 
 // Must be filled with real client size
 global int kWindowWidth;
@@ -14,7 +14,10 @@ internal void MachineTick() {
   u8 *Pixel = gVideoMemory + 30 + 20 * SCREEN_WIDTH;
   *Pixel++ = 1;
   *Pixel++ = 2;
-  *Pixel++ = 3;
+  *Pixel = 3;
+  *(Pixel + SCREEN_WIDTH) = 1;
+  *(Pixel + SCREEN_WIDTH * 2) = 2;
+  *(Pixel + SCREEN_WIDTH * 3) = 3;
 }
 
 

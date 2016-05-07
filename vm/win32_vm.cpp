@@ -16,14 +16,11 @@ internal void Win32UpdateWindow(HDC hdc) {
   if (!gWindowsBitmapMemory) return;
 
   // Copy data from the machine's video memory to our "display"
-  u32 *LeftTopDestPixel = (u32 *)gWindowsBitmapMemory;
-  int BytesPerPixel = 4;
-
+  int Pitch = SCREEN_WIDTH * PIXEL_SIZE;
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
     for (int x = 0; x < SCREEN_WIDTH; x++) {
       u8 *SrcPixel = gVideoMemory + SCREEN_WIDTH * y + x;
-      u32 *DestPixel =
-          LeftTopDestPixel + SCREEN_WIDTH * y + x;  // TODO: PIXEL_SIZE > 1
+      u32 *DestPixelStart = (u32 *)gWindowsBitmapMemory + (Pitch * y + x) * PIXEL_SIZE;
       u32 Value = 0;
       switch (*SrcPixel) {
         case 0: {
@@ -36,13 +33,20 @@ internal void Win32UpdateWindow(HDC hdc) {
           Value = 0x00FF00;  // green
         } break;
         case 3: {
-          Value = 0x0000FF;  // blue
+          Value = 0x00FFFF;  // blue
         } break;
         default: {
           Value = 0xCCCCCC;  // grey
         } break;
       }
-      *DestPixel = Value;
+
+      // Draw as many pixels as needed according to PIXEL_SIZE
+      for (int py = 0; py < PIXEL_SIZE; py++) {
+        for (int px = 0; px < PIXEL_SIZE; px++) {
+          u32 *DestPixel = DestPixelStart + py * Pitch + px;
+          *DestPixel = Value;
+        }
+      }
     }
   }
 
@@ -120,13 +124,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       gMachineMemory = VirtualAlloc(0, MEMORY_SIZE, MEM_COMMIT, PAGE_READWRITE);
       gVideoMemory = (u8 *)gMachineMemory + 0x0200;
 
-      gWindowsBitmapMemory =
-          VirtualAlloc(0, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u32),
-                       MEM_COMMIT, PAGE_READWRITE);
+      gWindowsBitmapMemory = VirtualAlloc(
+          0,
+          SCREEN_WIDTH * PIXEL_SIZE * SCREEN_HEIGHT * PIXEL_SIZE * sizeof(u32),
+          MEM_COMMIT, PAGE_READWRITE);
 
       // Init bitmap
-      GlobalBitmapInfo.bmiHeader.biWidth = SCREEN_WIDTH;
-      GlobalBitmapInfo.bmiHeader.biHeight = -SCREEN_HEIGHT;
+      GlobalBitmapInfo.bmiHeader.biWidth = SCREEN_WIDTH * PIXEL_SIZE;
+      GlobalBitmapInfo.bmiHeader.biHeight = -SCREEN_HEIGHT * PIXEL_SIZE;
       GlobalBitmapInfo.bmiHeader.biSize = sizeof(GlobalBitmapInfo.bmiHeader);
       GlobalBitmapInfo.bmiHeader.biPlanes = 1;
       GlobalBitmapInfo.bmiHeader.biBitCount = 32;
