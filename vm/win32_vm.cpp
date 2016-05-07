@@ -14,6 +14,64 @@ global volatile bool32 gRunning;
 
 global BITMAPINFO GlobalBitmapInfo;
 
+inline u32 Win32GetColor(u8 code) {
+  u32 value = 0;
+  switch (code) {
+    case 0: {
+      value = 0x000000;  // black
+    } break;
+    case 1: {
+      value = 0xFF00FF;  // magenta
+    } break;
+    case 2: {
+      value = 0x00008B;  // dark blue
+    } break;
+    case 3: {
+      value = 0x800080;  // purple
+    } break;
+    case 4: {
+      value = 0x006400;  // dark green
+    } break;
+    case 5: {
+      value = 0xA8A8A8;  // dark grey
+    } break;
+    case 6: {
+      value = 0x0000CD;  // medium blue
+    } break;
+    case 7: {
+      value = 0xADD8E6;  // light blue
+    } break;
+    case 8: {
+      value = 0x8B4513;  // brown
+    } break;
+    case 9: {
+      value = 0xFFA500;  // orange
+    } break;
+    case 10: {
+      value = 0xD3D3D3;  // light grey
+    } break;
+    case 11: {
+      value = 0xFF69B4;  // pink
+    } break;
+    case 12: {
+      value = 0x90EE90;  // light green
+    } break;
+    case 13: {
+      value = 0xFFFF00;  // yellow
+    } break;
+    case 14: {
+      value = 0x00FFFF;  // cyan
+    } break;
+    case 15: {
+      value = 0xFFFFFF;  // white
+    } break;
+    default: {
+      value = 0x00FF00;  // very bright green
+    } break;
+  }
+  return value;
+}
+
 internal void Win32UpdateWindow(HDC hdc) {
   if (!gWindowsBitmapMemory) return;
 
@@ -22,25 +80,7 @@ internal void Win32UpdateWindow(HDC hdc) {
     for (int x = 0; x < kWindowWidth; x++) {
       u8 *SrcPixel = gVideoMemory + kWindowWidth * y + x;
       u32 *DestPixel = (u32 *)gWindowsBitmapMemory + (kWindowWidth * y + x);
-      u32 Value = 0;
-      switch (*SrcPixel) {
-        case 0: {
-          Value = 0x000000;  // black
-        } break;
-        case 1: {
-          Value = 0xFF0000;  // red
-        } break;
-        case 2: {
-          Value = 0x00FF00;  // green
-        } break;
-        case 3: {
-          Value = 0x00FFFF;  // blue
-        } break;
-        default: {
-          Value = 0xCCCCCC;  // grey
-        } break;
-      }
-      *DestPixel = Value;
+      *DestPixel = Win32GetColor(*SrcPixel);
     }
   }
 

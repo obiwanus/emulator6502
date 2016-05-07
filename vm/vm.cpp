@@ -32,13 +32,19 @@ internal void DEBUGDrawRectangle(int X, int Y, int Width, int Height,
   }
 }
 
+global int gCounter = 0;
+
 internal void MachineTick() {
   if (GlobalRect.Width == 0) {
     // Init
     GlobalRect.X = GlobalRect.Y = 50;
     GlobalRect.dX = GlobalRect.dY = 1;
-    GlobalRect.Width = 5;
+    GlobalRect.Width = 2;
     GlobalRect.Color = 1;
+  }
+
+  if (gCounter++ % 10 == 0) {
+    GlobalRect.Color = ++GlobalRect.Color % 0xF;
   }
 
   // Erase
