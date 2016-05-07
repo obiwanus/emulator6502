@@ -10,6 +10,8 @@ global volatile bool32 gRunning;
 #include <windows.h>
 #include <intrin.h>
 
+#define SCREEN_ZOOM 4
+
 global BITMAPINFO GlobalBitmapInfo;
 
 internal void Win32UpdateWindow(HDC hdc) {
@@ -42,7 +44,7 @@ internal void Win32UpdateWindow(HDC hdc) {
     }
   }
 
-  StretchDIBits(hdc, 0, 0, kWindowWidth, kWindowHeight,  // dest
+  StretchDIBits(hdc, 0, 0, kWindowWidth * SCREEN_ZOOM, kWindowHeight * SCREEN_ZOOM,  // dest
                 0, 0, kWindowWidth, kWindowHeight,       // src
                 gWindowsBitmapMemory, &GlobalBitmapInfo, DIB_RGB_COLORS,
                 SRCCOPY);
@@ -97,8 +99,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // Create window so that its client area is exactly kWindowWidth/Height
     DWORD WindowStyle = WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_VISIBLE;
     RECT WindowRect = {};
-    WindowRect.right = kWindowWidth;
-    WindowRect.bottom = kWindowHeight;
+    WindowRect.right = kWindowWidth * SCREEN_ZOOM;
+    WindowRect.bottom = kWindowHeight * SCREEN_ZOOM;
     AdjustWindowRect(&WindowRect, WindowStyle, 0);
     int WindowWidth = WindowRect.right - WindowRect.left;
     int WindowHeight = WindowRect.bottom - WindowRect.top;
