@@ -5,6 +5,17 @@ global int const kMachineMemorySize = 65536;  // 64 Kb
 global int const kWindowWidth = 280;
 global int const kWindowHeight = 192;
 
+struct cpu {
+  u8 A;
+  u8 X;
+  u8 Y;
+  u8 SP;
+  u8 Status;
+  u16 PC;
+};
+
+global cpu CPU;
+
 
 // TODO: delete ==================================================
 struct rect {
