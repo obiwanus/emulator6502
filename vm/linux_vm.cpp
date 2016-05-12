@@ -9,16 +9,24 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <pthread.h>
+
+
+/*************** TODO *****************
+
+* separate thread for MachineTick
+* stretch bits
+
+**************************************/
 
 global bool gRunning;
-global void *gVideoMemory;
+global void *gLinuxBitmapMemory;
 
 #include "vm.cpp"
 
 global XImage *gXImage;
 
 int main(int argc, char const *argv[]) {
-
   Display *display;
   Window window;
   int screen;
@@ -34,19 +42,16 @@ int main(int argc, char const *argv[]) {
   u32 border_color = WhitePixel(display, screen);
   u32 bg_color = BlackPixel(display, screen);
 
-  const int kWindowWidth = SCREEN_WIDTH;
-  const int kWindowHeight = SCREEN_HEIGHT;
-
   window = XCreateSimpleWindow(display, RootWindow(display, screen), 300, 300,
-                               kWindowWidth, kWindowHeight, 0, border_color,
+                               kWindowWidth * SCREEN_ZOOM,
+                               kWindowHeight * SCREEN_ZOOM, 0, border_color,
                                bg_color);
 
   XSetStandardProperties(display, window, "My Window", "Hi!", None, NULL, 0,
                          NULL);
 
-  XSelectInput(display, window,
-               ExposureMask | KeyPressMask | KeyReleaseMask |
-               ButtonPressMask | StructureNotifyMask);
+  XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask |
+                                    ButtonPressMask | StructureNotifyMask);
   XMapRaised(display, window);
 
   Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
@@ -58,7 +63,6 @@ int main(int argc, char const *argv[]) {
 
   // Create x image
   {
-
     for (;;) {
       XEvent e;
       XNextEvent(display, &e);
@@ -68,16 +72,14 @@ int main(int argc, char const *argv[]) {
     gXImage = XGetImage(display, window, 0, 0, kWindowWidth, kWindowHeight,
                         AllPlanes, ZPixmap);
 
-    gVideoMemory = (void *)gXImage->data;
-
-    u32 *Pixel = (u32 *)gXImage->data;
-    for (int i = 0; i < kWindowWidth * 700; i++) {
-      *Pixel = 0x00FF00FF;
-      Pixel++;
-    }
+    gLinuxBitmapMemory = (void *)gXImage->data;
 
     gc = XCreateGC(display, window, 0, &gcvalues);
   }
+
+  // Init VM memory
+  gMachineMemory = malloc(kMachineMemorySize);
+  gVideoMemory = (u8 *)gMachineMemory + 0x0200;
 
   gRunning = true;
 
@@ -97,7 +99,7 @@ int main(int argc, char const *argv[]) {
 
     MachineTick();
 
-
+    CopyPixels(gLinuxBitmapMemory, gVideoMemory);
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
   }
