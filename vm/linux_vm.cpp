@@ -9,12 +9,11 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <unistd.h>
 #include <pthread.h>
-
 
 /*************** TODO *****************
 
-* separate thread for MachineTick
 * stretch bits
 
 **************************************/
@@ -25,6 +24,13 @@ global void *gLinuxBitmapMemory;
 #include "vm.cpp"
 
 global XImage *gXImage;
+
+static void *machine_thread(void *arg) {
+  while (gRunning) {
+    MachineTick();
+    usleep(1000);
+  }
+}
 
 int main(int argc, char const *argv[]) {
   Display *display;
@@ -47,8 +53,8 @@ int main(int argc, char const *argv[]) {
                                kWindowHeight * SCREEN_ZOOM, 0, border_color,
                                bg_color);
 
-  XSetStandardProperties(display, window, "My Window", "Hi!", None, NULL, 0,
-                         NULL);
+  XSetStandardProperties(display, window, "6502 virtual machine", "Hi!", None,
+                         NULL, 0, NULL);
 
   XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask |
                                     ButtonPressMask | StructureNotifyMask);
@@ -83,6 +89,13 @@ int main(int argc, char const *argv[]) {
 
   gRunning = true;
 
+  // Run the machine
+  pthread_t thread_id;
+  if (pthread_create(&thread_id, 0, &machine_thread, 0) != 0) {
+    fprintf(stderr, "Cannot create thread\n");
+    return 1;
+  }
+
   while (gRunning) {
     // Process events
     while (XPending(display)) {
@@ -96,8 +109,6 @@ int main(int argc, char const *argv[]) {
         }
       }
     }
-
-    MachineTick();
 
     CopyPixels(gLinuxBitmapMemory, gVideoMemory);
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
