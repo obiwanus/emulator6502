@@ -10,6 +10,11 @@ global volatile bool32 gRunning;
 
 global BITMAPINFO GlobalBitmapInfo;
 
+void Win32Print(char *String) {
+  // A hack to allow calling print() in functions above
+  OutputDebugStringA(String);
+}
+
 internal void Win32UpdateWindow(HDC hdc) {
   if (!gWindowsBitmapMemory) return;
 
@@ -151,7 +156,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     }
   } else {
     // TODO: logging
-    OutputDebugStringA("Couldn't register window class");
+    print("Couldn't register window class");
   }
 
   return 0;

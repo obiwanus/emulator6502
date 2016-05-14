@@ -5,6 +5,7 @@ global int const kMachineMemorySize = 65536;  // 64 Kb
 global int const kWindowWidth = 280;
 global int const kWindowHeight = 192;
 
+#include "utils.cpp"
 #include "asm.cpp"
 
 global void *gMachineMemory;
