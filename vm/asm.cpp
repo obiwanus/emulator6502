@@ -5,13 +5,14 @@
 #define MAXLINE 1000
 
 enum TokenType {
-  Token_Identifier = 0,
+  Token_EndOfStream = 0,
+
+  Token_Identifier,
   Token_Label,
   Token_Hash,
   Token_HexNumber,
   Token_DecNumber,
 
-  Token_EndOfStream,
   Token_SyntaxError,
 };
 
@@ -21,11 +22,16 @@ struct Token {
   char *text;
 };
 
-internal char *ReadFileIntoString(char *Filename) {
+struct Tokenizer {
+  char *at;
+  int line_num;
+};
+
+internal char *ReadFileIntoString(char *filename) {
   char *result = NULL;
-  FILE *file = fopen(Filename, "rb");
+  FILE *file = fopen(filename, "rb");
   if (file == NULL) {
-    print("Couldn't open file %s\n", Filename);
+    print("Couldn't open file %s\n", filename);
     exit(1);
   }
 
@@ -42,20 +48,57 @@ internal char *ReadFileIntoString(char *Filename) {
   return result;
 }
 
-internal int LoadProgram(char *Filename, int MemoryAddress) {
+inline bool IsEndOfLine(char c) { return (c == '\n' || c == '\r'); }
 
-  char *file_contents = ReadFileIntoString(Filename);
+inline bool IsWhitespace(char c) {
+  return (c == ' ' || c == '\t' || IsEndOfLine(c));
+}
 
-  bool Parsing = true;
+void EatWhiteSpace(Tokenizer *tokenizer) {
+  for (;;) {
+    char c = *tokenizer->at;
+    if (IsWhitespace(c)) {
+      if (c == '\n') {
+        tokenizer->line_num++;
+      }
+      tokenizer->at++;
+    } else if (c == '/' && tokenizer->at[1] == '/') {
+      tokenizer->at += 2;
+      while (!IsEndOfLine(*tokenizer->at)) {
+        tokenizer->at++;
+      }
+    } else {
+      break;
+    }
+  }
+}
 
-  // while (Parsing) {
-  //   Token token = GetToken(Tokenizer);
-  //   if (token.type == Token_EndOfStream) {
-  //     Parsing = false;
-  //   } else if (token.type == Token_SyntaxError) {
-  //     exit(1);
-  //   }
-  // }
+Token GetToken(Tokenizer *tokenizer) {
+  EatWhiteSpace(tokenizer);
+
+  Token token = {};
+
+  return token;
+}
+
+internal int LoadProgram(char *filename, int MemoryAddress) {
+  char *file_contents = ReadFileIntoString(filename);
+
+  Tokenizer tokenizer = {};
+  tokenizer.at = file_contents;
+
+  bool parsing = true;
+  while (parsing) {
+    Token token = GetToken(&tokenizer);
+    if (token.type == Token_EndOfStream) {
+      parsing = false;
+    } else if (token.type == Token_SyntaxError) {
+      // TODO
+      print("Syntax error");
+      exit(1);
+    } else {
+    }
+  }
 
   return 0;
 }

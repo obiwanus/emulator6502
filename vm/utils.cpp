@@ -10,7 +10,7 @@ void Win32Print(char *String);
   {                                     \
     char pbuf[2000];                    \
     sprintf_s(pbuf, 2000, __VA_ARGS__); \
-    Win32Print(pbuf);           \
+    Win32Print(pbuf);                   \
   }
 #else
 #define print(...) (printf(__VA_ARGS__))
