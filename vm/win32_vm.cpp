@@ -103,6 +103,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       GlobalBitmapInfo.bmiHeader.biBitCount = 32;
       GlobalBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
+      // Load the program at $D400
+      LoadProgram("test/dumb.s", 0xD400);
+
       // Run the machine
       HANDLE MainMachineThread = CreateThread(0, 0, MachineThread, 0, 0, 0);
 

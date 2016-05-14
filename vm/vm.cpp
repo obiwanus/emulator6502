@@ -5,12 +5,14 @@ global int const kMachineMemorySize = 65536;  // 64 Kb
 global int const kWindowWidth = 280;
 global int const kWindowHeight = 192;
 
+#include "asm.cpp"
+
 global void *gMachineMemory;
 global u8 *gVideoMemory;
 
 #define SCREEN_ZOOM 4
 
-struct cpu {
+struct CPU {
   u8 A;
   u8 X;
   u8 Y;
@@ -19,7 +21,7 @@ struct cpu {
   u16 PC;
 };
 
-global cpu CPU;
+global CPU gCPU;
 
 
 inline u32 GetColor(u8 code) {
@@ -132,10 +134,6 @@ internal void MachineTick() {
   if (gCounter++ % 10 == 0) {
     GlobalRect.Color = ++GlobalRect.Color % 0xF;
   }
-
-  // Erase
-  // DEBUGDrawRectangle(GlobalRect.X, GlobalRect.Y, GlobalRect.Width,
-  //                    GlobalRect.Width, 0);
 
   GlobalRect.X += GlobalRect.dX;
   GlobalRect.Y += GlobalRect.dY;
