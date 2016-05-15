@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define MAXLINE 1000
 
@@ -24,6 +25,9 @@ struct Token {
   TokenType type;
   int length;
   char *text;
+  int line_num;
+
+  bool Equals(char *);
 };
 
 struct Tokenizer {
@@ -36,6 +40,11 @@ struct Tokenizer {
   int tokens_allocated;
 
   Token *NewToken();
+};
+
+struct Assembler {
+  u8 *at;
+  Token *next_token;
 };
 
 Token *Tokenizer::NewToken() {
@@ -52,6 +61,15 @@ Token *Tokenizer::NewToken() {
   this->token_num++;
 
   return result;
+}
+
+bool Token::Equals(char *string) {
+  for (int i = 0; i < this->length; i++) {
+    if (string[i] == '\0' || tolower(string[i]) != tolower(this->text[i])) {
+      return false;
+    }
+  }
+  return true;
 }
 
 internal char *ReadFileIntoString(char *filename) {
@@ -115,6 +133,8 @@ Token *GetToken(Tokenizer *tokenizer) {
 
   Token *token = tokenizer->NewToken();
   token->text = tokenizer->at;
+  token->length = 0;
+  token->line_num = tokenizer->line_num;  // for error reporting
 
   char c = *tokenizer->at;
   if (IsAlpha(c)) {
@@ -131,15 +151,19 @@ Token *GetToken(Tokenizer *tokenizer) {
     }
   } else if (c == '#') {
     token->type = Token_Hash;
+    token->length = 1;
     tokenizer->at++;
   } else if (c == '(') {
     token->type = Token_OpenParen;
+    token->length = 1;
     tokenizer->at++;
   } else if (c == ')') {
     token->type = Token_CloseParen;
+    token->length = 1;
     tokenizer->at++;
   } else if (c == ',') {
     token->type = Token_Comma;
+    token->length = 1;
     tokenizer->at++;
   } else if (IsDecimal(c)) {
     token->type = Token_DecNumber;
@@ -173,7 +197,7 @@ Token *GetToken(Tokenizer *tokenizer) {
   return token;
 }
 
-internal int LoadProgram(char *filename, int MemoryAddress) {
+internal int LoadProgram(char *filename, int memory_address) {
   char *file_contents = ReadFileIntoString(filename);
   print("Assembling %s ...\n", filename);
 
@@ -181,17 +205,45 @@ internal int LoadProgram(char *filename, int MemoryAddress) {
   tokenizer.at = file_contents;
   tokenizer.line_num = 1;
 
-  bool parsing = true;
-  while (parsing) {
+  bool tokenizing = true;
+  while (tokenizing) {
     Token *token = GetToken(&tokenizer);
     if (token->type == Token_EndOfStream) {
-      parsing = false;
+      tokenizing = false;
     } else if (token->type == Token_SyntaxError) {
-      print("Syntax error at line %d: %s\n", tokenizer.line_num,
+      print("Syntax error at line %d: %s\n", token->line_num,
             tokenizer.error_msg);
       exit(1);
-    } else {
-      // TODO: compile
+    }
+  }
+
+  Assembler assembler = {};
+  assembler.at = (u8 *)gMachineMemory + memory_address;
+  assembler.next_token = tokenizer.tokens;
+
+  bool assembling = true;
+  while (assembling) {
+    Token *token = assembler.next_token;
+    switch (token->type) {
+      case Token_EndOfStream: {
+        assembling = false;
+      } break;
+      case Token_Label: {
+        assembler.next_token++;
+        // TODO
+      } break;
+      case Token_Identifier: {
+        assembler.next_token++;
+        if (token->Equals("LDA")) {
+          print("Found LDA on line %d\n", token->line_num);
+        }
+      } break;
+      default: {
+        print(
+            "Syntax error at line %d: command or label expected, got '%.*s'\n",
+            token->line_num, token->length, token->text);
+        exit(1);
+      } break;
     }
   }
 

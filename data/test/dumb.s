@@ -8,5 +8,5 @@
     sta $0206
 
 end:
-    nop ( ) ,
+    nop
     jmp end
