@@ -15,14 +15,15 @@ void Win32Print(char *String) {
   OutputDebugStringA(String);
 }
 
-internal void Win32UpdateWindow(HDC hdc) {
+static void Win32UpdateWindow(HDC hdc) {
   if (!gWindowsBitmapMemory) return;
 
   // Copy data from the machine's video memory to our "display"
   CopyPixels(gWindowsBitmapMemory, gVideoMemory);
 
-  StretchDIBits(hdc, 0, 0, kWindowWidth * SCREEN_ZOOM, kWindowHeight * SCREEN_ZOOM,  // dest
-                0, 0, kWindowWidth, kWindowHeight,       // src
+  StretchDIBits(hdc, 0, 0, kWindowWidth * SCREEN_ZOOM,
+                kWindowHeight * SCREEN_ZOOM,        // dest
+                0, 0, kWindowWidth, kWindowHeight,  // src
                 gWindowsBitmapMemory, &GlobalBitmapInfo, DIB_RGB_COLORS,
                 SRCCOPY);
 }

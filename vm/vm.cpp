@@ -24,7 +24,6 @@ struct CPU {
 
 global CPU gCPU;
 
-
 inline u32 GetColor(u8 code) {
   u32 value = 0;
   switch (code) {
@@ -83,7 +82,7 @@ inline u32 GetColor(u8 code) {
   return value;
 }
 
-internal void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
+static void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
   // Copy data from the machine's video memory to our "display"
   for (int y = 0; y < kWindowHeight; y++) {
     for (int x = 0; x < kWindowWidth; x++) {
@@ -93,7 +92,6 @@ internal void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
     }
   }
 }
-
 
 // TODO: delete ==================================================
 struct rect {
@@ -107,8 +105,7 @@ struct rect {
 
 global rect GlobalRect;
 
-internal void DEBUGDrawRectangle(int X, int Y, int Width, int Height,
-                                 u8 Color) {
+static void DEBUGDrawRectangle(int X, int Y, int Width, int Height, u8 Color) {
   int Pitch = kWindowWidth;
   u8 *Row = (u8 *)gVideoMemory + Pitch * Y + X;
 
@@ -123,7 +120,7 @@ internal void DEBUGDrawRectangle(int X, int Y, int Width, int Height,
 
 global int gCounter = 0;
 
-internal void MachineTick() {
+static void MachineTick() {
   if (GlobalRect.Width == 0) {
     // Init
     GlobalRect.X = GlobalRect.Y = 50;

@@ -15,7 +15,6 @@ typedef float r32;
 typedef double r64;
 typedef i32 bool32;
 
-#define internal static
 #define global static
 #define local_persist static
 

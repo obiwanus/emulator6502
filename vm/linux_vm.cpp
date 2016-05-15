@@ -87,6 +87,9 @@ int main(int argc, char const *argv[]) {
   gMachineMemory = malloc(kMachineMemorySize);
   gVideoMemory = (u8 *)gMachineMemory + 0x0200;
 
+  // Load the program at $D400
+  LoadProgram("test/dumb.s", 0xD400);
+
   gRunning = true;
 
   // Run the machine

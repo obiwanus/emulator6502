@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #define MAXLINE 1000
 
@@ -43,8 +44,15 @@ struct Tokenizer {
 };
 
 struct Assembler {
-  u8 *at;
-  Token *next_token;
+  u8 *at_memory;
+  Token *at_token;
+
+  Token *NextToken();
+  Token *RequireToken(TokenType);
+  int RequireNumber();
+  bool PeekToken(TokenType);
+
+  void SyntaxError(char *);
 };
 
 Token *Tokenizer::NewToken() {
@@ -72,7 +80,65 @@ bool Token::Equals(char *string) {
   return true;
 }
 
-internal char *ReadFileIntoString(char *filename) {
+Token *Assembler::NextToken() {
+  // keep at_token pointing at the current one, not the next
+  this->at_token++;
+  return this->at_token;
+}
+
+Token *Assembler::RequireToken(TokenType type) {
+  Token *token = this->NextToken();
+  if (token->type != type) {
+    char *expected;
+    if (type == Token_Identifier) {
+      expected = "identifier";
+    } else if (type == Token_Label) {
+      expected = "label";
+    } else if (type == Token_Hash) {
+      expected = "'#'";
+    } else if (type == Token_OpenParen) {
+      expected = "'('";
+    } else if (type == Token_CloseParen) {
+      expected = "')'";
+    } else if (type == Token_Comma) {
+      expected = "comma";
+    } else if (type == Token_DecNumber || type == Token_HexNumber) {
+      expected = "number";
+    } else {
+      expected = "unknown token";
+    }
+    char error[100];
+    sprintf(error, "%s expected, got", expected);
+    this->SyntaxError(error);
+  }
+}
+
+int Assembler::RequireNumber() {
+  int value = 0;
+  Token *token = this->NextToken();
+
+  if (token->type != Token_HexNumber && token->type != Token_DecNumber) {
+    this->SyntaxError("number expected, got");
+  }
+
+  if (token->type == Token_HexNumber) {
+  } else if (token->type == Token_DecNumber) {
+  }
+  return value;
+}
+
+bool Assembler::PeekToken(TokenType type) {
+  return (this->at_token + 1)->type == type;
+}
+
+void Assembler::SyntaxError(char *string) {
+  Token *token = this->at_token;
+  print("Syntax error at line %d: %s: '%.*s'\n", token->line_num, string,
+        token->length, token->text);
+  exit(1);
+}
+
+static char *ReadFileIntoString(char *filename) {
   char *result = NULL;
   FILE *file = fopen(filename, "rb");
   if (file == NULL) {
@@ -167,15 +233,15 @@ Token *GetToken(Tokenizer *tokenizer) {
     tokenizer->at++;
   } else if (IsDecimal(c)) {
     token->type = Token_DecNumber;
-    while (IsDecimal(c)) {
-      c = *tokenizer->at++;
+    while (IsDecimal(*tokenizer->at)) {
+      tokenizer->at++;
       token->length++;
     }
   } else if (c == '$') {
     token->type = Token_HexNumber;
-    c = *++tokenizer->at;
-    while (IsHex(c)) {
-      c = *tokenizer->at++;
+    tokenizer->at++;
+    while (IsHex(*tokenizer->at)) {
+      tokenizer->at++;
       token->length++;
     }
     if (token->length == 0) {
@@ -197,7 +263,7 @@ Token *GetToken(Tokenizer *tokenizer) {
   return token;
 }
 
-internal int LoadProgram(char *filename, int memory_address) {
+static int LoadProgram(char *filename, int memory_address) {
   char *file_contents = ReadFileIntoString(filename);
   print("Assembling %s ...\n", filename);
 
@@ -218,33 +284,35 @@ internal int LoadProgram(char *filename, int memory_address) {
   }
 
   Assembler assembler = {};
-  assembler.at = (u8 *)gMachineMemory + memory_address;
-  assembler.next_token = tokenizer.tokens;
+  assembler.at_memory = (u8 *)gMachineMemory + memory_address;
+  assembler.at_token = tokenizer.tokens;
 
   bool assembling = true;
+  Token *token = assembler.at_token;
   while (assembling) {
-    Token *token = assembler.next_token;
     switch (token->type) {
       case Token_EndOfStream: {
         assembling = false;
       } break;
       case Token_Label: {
-        assembler.next_token++;
+        assembler.at_token++;
         // TODO
       } break;
       case Token_Identifier: {
-        assembler.next_token++;
-        if (token->Equals("LDA")) {
-          print("Found LDA on line %d\n", token->line_num);
+        if (token->Equals("lda")) {
+          token = assembler.NextToken();
+          if (token->type == Token_Hash) {
+            int value = assembler.RequireNumber();
+          }
+        } else {
+          assembler.SyntaxError("Unknown command");
         }
       } break;
       default: {
-        print(
-            "Syntax error at line %d: command or label expected, got '%.*s'\n",
-            token->line_num, token->length, token->text);
-        exit(1);
+        assembler.SyntaxError("Command or label expected, got");
       } break;
     }
+    token = assembler.NextToken();
   }
 
   return 0;
