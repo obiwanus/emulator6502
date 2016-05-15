@@ -13,6 +13,7 @@ void Win32Print(char *String);
     Win32Print(pbuf);                   \
   }
 #else
+  // TODO: be able to choose stdout/stderr
 #define print(...) (printf(__VA_ARGS__))
 #endif
 
