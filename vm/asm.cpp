@@ -24,14 +24,35 @@ struct Token {
   TokenType type;
   int length;
   char *text;
-  int value;
 };
 
 struct Tokenizer {
   char *at;
   int line_num;
   char error_msg[500];
+
+  Token *tokens;
+  int token_num;
+  int tokens_allocated;
+
+  Token *NewToken();
 };
+
+Token *Tokenizer::NewToken() {
+  if (this->tokens_allocated == 0) {
+    this->tokens_allocated = 1000;
+    this->tokens = (Token *)malloc(this->tokens_allocated * sizeof(Token));
+  } else if (this->token_num >= this->tokens_allocated - 2) {
+    this->tokens_allocated *= 2;
+    this->tokens =
+        (Token *)realloc(this->tokens, this->tokens_allocated * sizeof(Token));
+  }
+
+  Token *result = this->tokens + this->token_num;
+  this->token_num++;
+
+  return result;
+}
 
 internal char *ReadFileIntoString(char *filename) {
   char *result = NULL;
@@ -64,9 +85,7 @@ inline bool IsAlpha(char c) {
   return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
 }
 
-inline bool IsDecimal(char c) {
-  return '0' <= c && c <= '9';
-}
+inline bool IsDecimal(char c) { return '0' <= c && c <= '9'; }
 
 inline bool IsHex(char c) {
   return IsDecimal(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F');
@@ -91,68 +110,64 @@ void EatWhiteSpace(Tokenizer *tokenizer) {
   }
 }
 
-Token GetToken(Tokenizer *tokenizer) {
+Token *GetToken(Tokenizer *tokenizer) {
   EatWhiteSpace(tokenizer);
 
-  Token token = {};
-  token.text = tokenizer->at;
+  Token *token = tokenizer->NewToken();
+  token->text = tokenizer->at;
 
   char c = *tokenizer->at;
   if (IsAlpha(c)) {
     while (!IsWhitespace(c) && c != ':' && c != '\0') {
       c = *++tokenizer->at;
-      token.length++;
+      token->length++;
     }
     if (c == ':') {
-      token.type = Token_Label;
-      token.length--;  // don't include the colon
+      token->type = Token_Label;
+      token->length--;  // don't include the colon
       tokenizer->at++;
     } else {
-      token.type = Token_Identifier;
+      token->type = Token_Identifier;
     }
-  }
-  else if (c == '#') {
-    token.type = Token_Hash;
+  } else if (c == '#') {
+    token->type = Token_Hash;
     tokenizer->at++;
-  }
-  else if (c == '(') {
-    token.type = Token_OpenParen;
+  } else if (c == '(') {
+    token->type = Token_OpenParen;
     tokenizer->at++;
-  }
-  else if (c == ')') {
-    token.type = Token_CloseParen;
+  } else if (c == ')') {
+    token->type = Token_CloseParen;
     tokenizer->at++;
-  }
-  else if (c == ',') {
-    token.type = Token_Comma;
+  } else if (c == ',') {
+    token->type = Token_Comma;
     tokenizer->at++;
   } else if (IsDecimal(c)) {
-    token.type = Token_DecNumber;
+    token->type = Token_DecNumber;
     while (IsDecimal(c)) {
       c = *tokenizer->at++;
-      token.length++;
+      token->length++;
     }
   } else if (c == '$') {
-    token.type = Token_HexNumber;
+    token->type = Token_HexNumber;
     c = *++tokenizer->at;
     while (IsHex(c)) {
       c = *tokenizer->at++;
-      token.length++;
+      token->length++;
     }
-    if (token.length == 0) {
-      token.type = Token_SyntaxError;
+    if (token->length == 0) {
+      token->type = Token_SyntaxError;
       sprintf(tokenizer->error_msg, "Number expected after $");
     }
   } else if (c == '\0') {
-    token.type = Token_EndOfStream;
+    token->type = Token_EndOfStream;
   } else {
-    token.type = Token_SyntaxError;
+    token->type = Token_SyntaxError;
     while (!IsWhitespace(c)) {
       c = *++tokenizer->at;
-      token.length++;
+      token->length++;
     }
-    sprintf(tokenizer->error_msg, "Unknown token '%.*s'", token.length,
-            token.text);
+    sprintf(tokenizer->error_msg, "Unknown token '%.*s'", token->length,
+            token->text);
   }
 
   return token;
@@ -168,10 +183,10 @@ internal int LoadProgram(char *filename, int MemoryAddress) {
 
   bool parsing = true;
   while (parsing) {
-    Token token = GetToken(&tokenizer);
-    if (token.type == Token_EndOfStream) {
+    Token *token = GetToken(&tokenizer);
+    if (token->type == Token_EndOfStream) {
       parsing = false;
-    } else if (token.type == Token_SyntaxError) {
+    } else if (token->type == Token_SyntaxError) {
       print("Syntax error at line %d: %s\n", tokenizer.line_num,
             tokenizer.error_msg);
       exit(1);
