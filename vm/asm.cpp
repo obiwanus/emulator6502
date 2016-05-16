@@ -86,6 +86,66 @@ struct Instruction {
   int address;
 };
 
+struct SymbolTableEntry {
+  char *symbol;
+  int value;
+  Instruction *instruction;
+};
+
+struct SymbolTable {
+  char *symbol_space;
+  char *free_space;
+  int space_allocated;
+
+  SymbolTableEntry *entries;
+  int num_entries;
+  int entries_allocated;
+
+  SymbolTable();
+  SymbolTableEntry *AddEntry(Token *);
+  SymbolTableEntry *FindEntry(Token *);
+  void AllocateSpaceIfNeeded(Token *);
+};
+
+SymbolTable::SymbolTable() {
+  this->space_allocated = 10000;
+  this->symbol_space = (char *)malloc(this->space_allocated * sizeof(char));
+  this->free_space = this->symbol_space;
+
+  this->entries_allocated = 1000;
+  this->num_entries = 0;
+  this->entries = (SymbolTableEntry *)malloc(this->entries_allocated *
+                                             sizeof(SymbolTableEntry));
+}
+
+void SymbolTable::AllocateSpaceIfNeeded(Token *token) {
+  if (this->free_space - this->symbol_space >=
+      this->space_allocated - token->length) {
+    this->space_allocated *= 2;
+    this->symbol_space = (char *)realloc(this->symbol_space,
+                                         this->space_allocated * sizeof(char));
+  }
+  if (this->num_entries >= this->entries_allocated - 2) {
+    this->entries_allocated *= 2;
+    this->entries = (SymbolTableEntry *)realloc(
+        this->entries, this->entries_allocated * sizeof(SymbolTableEntry));
+  }
+}
+
+SymbolTableEntry *SymbolTable::AddEntry(Token *token) {
+  this->AllocateSpaceIfNeeded(token);
+
+  SymbolTableEntry *entry = this->entries + this->num_entries;
+  this->num_entries++;
+
+  entry->symbol = this->free_space;
+  strncpy(entry->symbol, token->text, token->length);
+  entry->symbol[token->length] = '\0';
+  this->free_space += token->length + 1;
+
+  return entry;
+}
+
 struct Assembler {
   u8 *at_memory;
   Token *at_token;
@@ -386,6 +446,7 @@ static int LoadProgram(char *filename, int memory_address) {
   bool assembling = true;
   Token *token = assembler.at_token;
   Instruction *instruction = assembler.instructions;
+  SymbolTable symbol_table = SymbolTable();
 
   while (assembling) {
     Instruction *instruction = assembler.NewInstruction();
@@ -394,7 +455,9 @@ static int LoadProgram(char *filename, int memory_address) {
         assembling = false;
       } break;
       case Token_Label: {
-        // TODO
+        SymbolTableEntry *entry = symbol_table.AddEntry(token);
+        entry->instruction =
+            (instruction + 1);  // we'll resolve its address later
       } break;
       case Token_Identifier: {
         if (token->Equals("lda")) {
