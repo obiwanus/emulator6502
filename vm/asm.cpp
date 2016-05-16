@@ -37,10 +37,53 @@ struct Tokenizer {
   char error_msg[500];
 
   Token *tokens;
-  int token_num;
+  int num_tokens;
   int tokens_allocated;
 
   Token *NewToken();
+};
+
+enum AddressingMode {
+  AM_Implied = 0,
+  AM_Immediate,
+  AM_Absolute,
+  AM_Relative,
+  AM_Indexed_X,
+  AM_Indexed_Y,
+  AM_Indirect,
+  AM_Indirect_Indexed_Y,
+  AM_Indexed_X_Indirect,
+};
+
+enum InstructionType {
+  I_ADC = 0,
+  I_AND,
+  I_ASL,
+  I_BCC,
+  I_BCS,
+  I_BEQ,
+  I_BIT,
+  I_BMI,
+  I_BNE,
+  I_BPL,
+  I_BRK,
+  I_BVC,
+  I_CLC,
+  I_CLD,
+  I_CLI,
+  I_CLV,
+  // ...
+
+  I_STA,
+  I_LDA,
+  I_JMP,
+  I_NOP,
+};
+
+struct Instruction {
+  InstructionType type;
+  AddressingMode mode;
+  int address;
 };
 
 struct Assembler {
@@ -49,9 +92,15 @@ struct Assembler {
 
   Token *NextToken();
   Token *PrevToken();
+  Token *PeekToken();
   Token *RequireToken(TokenType);
   int RequireNumber();
-  Token *PeekToken();
+
+  Instruction *instructions;
+  int num_instructions;
+  int instructions_allocated;
+
+  Instruction *NewInstruction();
 
   void SyntaxError(char *);
 };
@@ -60,14 +109,14 @@ Token *Tokenizer::NewToken() {
   if (this->tokens_allocated == 0) {
     this->tokens_allocated = 1000;
     this->tokens = (Token *)malloc(this->tokens_allocated * sizeof(Token));
-  } else if (this->token_num >= this->tokens_allocated - 2) {
+  } else if (this->num_tokens >= this->tokens_allocated - 2) {
     this->tokens_allocated *= 2;
     this->tokens =
         (Token *)realloc(this->tokens, this->tokens_allocated * sizeof(Token));
   }
 
-  Token *result = this->tokens + this->token_num;
-  this->token_num++;
+  Token *result = this->tokens + this->num_tokens;
+  this->num_tokens++;
 
   return result;
 }
@@ -126,7 +175,7 @@ int atoi(char *string, int length, int base) {
   int power = 1;
   for (int i = 0; i < length; i++) {
     int c = tolower(string[length - i - 1]);
-    if ('a' <= c && c <= 'f'){
+    if ('a' <= c && c <= 'f') {
       digit = 10 + (c - 'a');
     } else {
       digit = c - '0';
@@ -158,8 +207,23 @@ int Assembler::RequireNumber() {
   return value;
 }
 
-Token *Assembler::PeekToken() {
-  return (this->at_token + 1);
+Token *Assembler::PeekToken() { return (this->at_token + 1); }
+
+Instruction *Assembler::NewInstruction() {
+  if (this->instructions_allocated == 0) {
+    this->instructions_allocated = 1000;
+    this->instructions = (Instruction *)malloc(this->instructions_allocated *
+                                               sizeof(Instruction));
+  } else if (this->num_instructions >= this->instructions_allocated - 2) {
+    this->instructions_allocated *= 2;
+    this->instructions = (Instruction *)realloc(
+        this->instructions, this->instructions_allocated * sizeof(Instruction));
+  }
+
+  Instruction *result = this->instructions + this->num_instructions;
+  this->num_instructions++;
+
+  return result;
 }
 
 void Assembler::SyntaxError(char *string) {
@@ -321,37 +385,56 @@ static int LoadProgram(char *filename, int memory_address) {
 
   bool assembling = true;
   Token *token = assembler.at_token;
+  Instruction *instruction = assembler.instructions;
+
   while (assembling) {
+    Instruction *instruction = assembler.NewInstruction();
     switch (token->type) {
       case Token_EndOfStream: {
         assembling = false;
       } break;
       case Token_Label: {
-        assembler.at_token++;
         // TODO
       } break;
       case Token_Identifier: {
         if (token->Equals("lda")) {
+          instruction->type = I_LDA;
           token = assembler.NextToken();
           if (token->type == Token_Hash) {
-            // Immediate addressing
-            int value = assembler.RequireNumber();
+            instruction->address = assembler.RequireNumber();
+            instruction->mode = AM_Immediate;
           } else if (token->type == Token_Identifier) {
             // TODO: symbol table
+            assembler.SyntaxError("not implemented");
             assembler.NextToken();
           } else {
             assembler.PrevToken();
-            int address = assembler.RequireNumber();
+            instruction->address = assembler.RequireNumber();
+            instruction->mode = AM_Absolute;
           }
         } else if (token->Equals("sta")) {
-          int value = assembler.RequireNumber();
+          instruction->type = I_STA;
+          token = assembler.PeekToken();
+          if (token->type == Token_Identifier) {
+            // TODO: symbol table
+            assembler.SyntaxError("not implemented");
+            assembler.NextToken();
+          } else {
+            instruction->address = assembler.RequireNumber();
+            instruction->mode = AM_Absolute;
+          }
+        } else if (token->Equals("nop")) {
+          // a command for lazy cpus
+          instruction->type = I_NOP;
         } else if (token->Equals("jmp")) {
+          instruction->type = I_JMP;
           token = assembler.PeekToken();
           if (token->type == Token_Identifier) {
             // TODO: symbol table
             assembler.NextToken();
+            assembler.SyntaxError("not implemented");
           } else {
-            int address = assembler.RequireNumber();
+            instruction->address = assembler.RequireNumber();
           }
         } else {
           assembler.SyntaxError("Unknown command");
