@@ -1,4 +1,4 @@
-    lda #01
+    lda #$F3
     sta $0200
     lda #02
     sta $0202

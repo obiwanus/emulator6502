@@ -105,12 +105,31 @@ Token *Assembler::RequireToken(TokenType type) {
     } else if (type == Token_DecNumber || type == Token_HexNumber) {
       expected = "number";
     } else {
-      expected = "unknown token";
+      expected = "unknown token";  // hopefully we'll never reach this
     }
     char error[100];
     sprintf(error, "%s expected, got", expected);
     this->SyntaxError(error);
   }
+}
+
+// TODO: debug
+
+int atoi(char *string, int length, int base) {
+  int value = 0;
+  int digit = 0;
+  int power = 1;
+  for (int i = 0; i < length; i++) {
+    char c = tolower(string[length - i - 1]);
+    if ('a' <= c && c <= 'f'){
+      digit = 10 + (c - 'a');
+    } else {
+      digit = c - '0';
+    }
+    value += digit * power;
+    power *= base;
+  }
+  return value;
 }
 
 int Assembler::RequireNumber() {
@@ -122,8 +141,11 @@ int Assembler::RequireNumber() {
   }
 
   if (token->type == Token_HexNumber) {
+    value = atoi(token->text, token->length, 16);
   } else if (token->type == Token_DecNumber) {
+    value = atoi(token->text, token->length, 10);
   }
+
   return value;
 }
 
@@ -303,6 +325,7 @@ static int LoadProgram(char *filename, int memory_address) {
           token = assembler.NextToken();
           if (token->type == Token_Hash) {
             int value = assembler.RequireNumber();
+            int a = 0;
           }
         } else {
           assembler.SyntaxError("Unknown command");
