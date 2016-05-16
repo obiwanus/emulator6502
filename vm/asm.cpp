@@ -111,16 +111,15 @@ Token *Assembler::RequireToken(TokenType type) {
     sprintf(error, "%s expected, got", expected);
     this->SyntaxError(error);
   }
+  return token;
 }
-
-// TODO: debug
 
 int atoi(char *string, int length, int base) {
   int value = 0;
   int digit = 0;
   int power = 1;
   for (int i = 0; i < length; i++) {
-    char c = tolower(string[length - i - 1]);
+    int c = tolower(string[length - i - 1]);
     if ('a' <= c && c <= 'f'){
       digit = 10 + (c - 'a');
     } else {
@@ -144,6 +143,10 @@ int Assembler::RequireNumber() {
     value = atoi(token->text, token->length, 16);
   } else if (token->type == Token_DecNumber) {
     value = atoi(token->text, token->length, 10);
+  }
+
+  if (value > 0xFFFF) {
+    this->SyntaxError("Number is too big");
   }
 
   return value;
@@ -262,6 +265,7 @@ Token *GetToken(Tokenizer *tokenizer) {
   } else if (c == '$') {
     token->type = Token_HexNumber;
     tokenizer->at++;
+    token->text++;  // skip the $
     while (IsHex(*tokenizer->at)) {
       tokenizer->at++;
       token->length++;
@@ -325,7 +329,6 @@ static int LoadProgram(char *filename, int memory_address) {
           token = assembler.NextToken();
           if (token->type == Token_Hash) {
             int value = assembler.RequireNumber();
-            int a = 0;
           }
         } else {
           assembler.SyntaxError("Unknown command");
@@ -337,6 +340,7 @@ static int LoadProgram(char *filename, int memory_address) {
     }
     token = assembler.NextToken();
   }
+  print("Assembling of %s finished", filename);
 
   return 0;
 }
