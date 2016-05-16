@@ -48,9 +48,10 @@ struct Assembler {
   Token *at_token;
 
   Token *NextToken();
+  Token *PrevToken();
   Token *RequireToken(TokenType);
   int RequireNumber();
-  bool PeekToken(TokenType);
+  Token *PeekToken();
 
   void SyntaxError(char *);
 };
@@ -83,6 +84,11 @@ bool Token::Equals(char *string) {
 Token *Assembler::NextToken() {
   // keep at_token pointing at the current one, not the next
   this->at_token++;
+  return this->at_token;
+}
+
+Token *Assembler::PrevToken() {
+  this->at_token--;
   return this->at_token;
 }
 
@@ -152,8 +158,8 @@ int Assembler::RequireNumber() {
   return value;
 }
 
-bool Assembler::PeekToken(TokenType type) {
-  return (this->at_token + 1)->type == type;
+Token *Assembler::PeekToken() {
+  return (this->at_token + 1);
 }
 
 void Assembler::SyntaxError(char *string) {
@@ -328,7 +334,24 @@ static int LoadProgram(char *filename, int memory_address) {
         if (token->Equals("lda")) {
           token = assembler.NextToken();
           if (token->type == Token_Hash) {
+            // Immediate addressing
             int value = assembler.RequireNumber();
+          } else if (token->type == Token_Identifier) {
+            // TODO: symbol table
+            assembler.NextToken();
+          } else {
+            assembler.PrevToken();
+            int address = assembler.RequireNumber();
+          }
+        } else if (token->Equals("sta")) {
+          int value = assembler.RequireNumber();
+        } else if (token->Equals("jmp")) {
+          token = assembler.PeekToken();
+          if (token->type == Token_Identifier) {
+            // TODO: symbol table
+            assembler.NextToken();
+          } else {
+            int address = assembler.RequireNumber();
           }
         } else {
           assembler.SyntaxError("Unknown command");
@@ -340,7 +363,7 @@ static int LoadProgram(char *filename, int memory_address) {
     }
     token = assembler.NextToken();
   }
-  print("Assembling of %s finished", filename);
+  print("Assembling of %s finished\n", filename);
 
   return 0;
 }
