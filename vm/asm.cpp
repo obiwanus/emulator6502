@@ -29,6 +29,7 @@ struct Token {
   int line_num;
 
   bool Equals(char *);
+  void SyntaxError(char *);
 };
 
 struct Tokenizer {
@@ -84,6 +85,7 @@ struct Instruction {
   InstructionType type;
   AddressingMode mode;
   int address;
+  Instruction *points_to_instruction;
 };
 
 struct SymbolTableEntry {
@@ -102,8 +104,8 @@ struct SymbolTable {
   int entries_allocated;
 
   SymbolTable();
-  SymbolTableEntry *AddEntry(Token *);
-  SymbolTableEntry *FindEntry(Token *);
+  SymbolTableEntry *AddEntry(Token *, int);
+  SymbolTableEntry *GetEntry(Token *);
   void AllocateSpaceIfNeeded(Token *);
 };
 
@@ -132,8 +134,16 @@ void SymbolTable::AllocateSpaceIfNeeded(Token *token) {
   }
 }
 
-SymbolTableEntry *SymbolTable::AddEntry(Token *token) {
+SymbolTableEntry *SymbolTable::AddEntry(Token *token, int value) {
   this->AllocateSpaceIfNeeded(token);
+
+  // Find if there is an existing one
+  // Yes, linear search, don't look at me like this
+  for (int i = 0; i < this->num_entries; i++) {
+    if (token->Equals(this->entries[i].symbol)) {
+      token->SyntaxError("Identifier already declared");
+    }
+  }
 
   SymbolTableEntry *entry = this->entries + this->num_entries;
   this->num_entries++;
@@ -141,7 +151,26 @@ SymbolTableEntry *SymbolTable::AddEntry(Token *token) {
   entry->symbol = this->free_space;
   strncpy(entry->symbol, token->text, token->length);
   entry->symbol[token->length] = '\0';
+  entry->value = value;
+  entry->instruction = NULL;
+
   this->free_space += token->length + 1;
+
+  return entry;
+}
+
+SymbolTableEntry *SymbolTable::GetEntry(Token *token) {
+  SymbolTableEntry *entry = NULL;
+
+  for (int i = 0; i < this->num_entries; i++) {
+    if (token->Equals(this->entries[i].symbol)) {
+      entry = this->entries + i;
+      break;
+    }
+  }
+  if (entry == NULL) {
+    token->SyntaxError("Undeclared identifier");
+  }
 
   return entry;
 }
@@ -188,6 +217,12 @@ bool Token::Equals(char *string) {
     }
   }
   return true;
+}
+
+void Token::SyntaxError(char *string) {
+  print("Syntax error at line %d: %s: '%.*s'\n", this->line_num, string,
+        this->length, this->text);
+  exit(1);
 }
 
 Token *Assembler::NextToken() {
@@ -287,10 +322,7 @@ Instruction *Assembler::NewInstruction() {
 }
 
 void Assembler::SyntaxError(char *string) {
-  Token *token = this->at_token;
-  print("Syntax error at line %d: %s: '%.*s'\n", token->line_num, string,
-        token->length, token->text);
-  exit(1);
+  this->at_token->SyntaxError(string);
 }
 
 static char *ReadFileIntoString(char *filename) {
@@ -365,7 +397,6 @@ Token *GetToken(Tokenizer *tokenizer) {
     }
     if (c == ':') {
       token->type = Token_Label;
-      token->length--;  // don't include the colon
       tokenizer->at++;
     } else {
       token->type = Token_Identifier;
@@ -443,23 +474,26 @@ static int LoadProgram(char *filename, int memory_address) {
   assembler.at_memory = (u8 *)gMachineMemory + memory_address;
   assembler.at_token = tokenizer.tokens;
 
-  bool assembling = true;
+  bool parsing = true;
   Token *token = assembler.at_token;
   Instruction *instruction = assembler.instructions;
   SymbolTable symbol_table = SymbolTable();
 
-  while (assembling) {
-    Instruction *instruction = assembler.NewInstruction();
+  while (parsing) {
     switch (token->type) {
       case Token_EndOfStream: {
-        assembling = false;
+        parsing = false;
       } break;
+
       case Token_Label: {
-        SymbolTableEntry *entry = symbol_table.AddEntry(token);
+        SymbolTableEntry *entry = symbol_table.AddEntry(token, 0);
         entry->instruction =
             (instruction + 1);  // we'll resolve its address later
       } break;
+
       case Token_Identifier: {
+        instruction = assembler.NewInstruction();
+
         if (token->Equals("lda")) {
           instruction->type = I_LDA;
           token = assembler.NextToken();
@@ -493,9 +527,13 @@ static int LoadProgram(char *filename, int memory_address) {
           instruction->type = I_JMP;
           token = assembler.PeekToken();
           if (token->type == Token_Identifier) {
-            // TODO: symbol table
-            assembler.NextToken();
-            assembler.SyntaxError("not implemented");
+            token = assembler.NextToken();
+            SymbolTableEntry *entry = symbol_table.GetEntry(token);
+            if (entry->instruction != NULL) {
+              instruction->points_to_instruction = entry->instruction;
+            } else {
+              instruction->address = entry->value;
+            }
           } else {
             instruction->address = assembler.RequireNumber();
           }
@@ -503,6 +541,7 @@ static int LoadProgram(char *filename, int memory_address) {
           assembler.SyntaxError("Unknown command");
         }
       } break;
+
       default: {
         assembler.SyntaxError("Command or label expected, got");
       } break;
