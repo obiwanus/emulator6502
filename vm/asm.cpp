@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdarg.h>
+
+#include "utils.cpp"
 
 #define MAXLINE 1000
 
@@ -29,6 +30,8 @@ struct Token {
   int line_num;
 
   bool Equals(char *);
+  bool IsNumber();
+  int ParseNumber();
   void SyntaxError(char *);
 };
 
@@ -45,7 +48,7 @@ struct Tokenizer {
 };
 
 // Addressing modes
-#define AM_IMPLIED 0x00
+#define AM_NONE 0x00
 #define AM_IMMEDIATE 0x01
 #define AM_ABSOLUTE 0x02
 #define AM_RELATIVE 0x04
@@ -53,6 +56,7 @@ struct Tokenizer {
 #define AM_INDEXED_Y 0x10
 #define AM_INDIRECT_INDEXED_Y 0x20
 #define AM_INDEXED_X_INDIRECT 0x40
+#define AM_IMPLIED 0x80
 #define AM_ALL 0xFF
 #define AM_INDIRECT 0x100  // not included in AM_ALL
 
@@ -221,6 +225,25 @@ bool Token::Equals(char *string) {
   return true;
 }
 
+bool Token::IsNumber() {
+  return this->type == Token_DecNumber || this->type == Token_HexNumber;
+}
+
+int Token::ParseNumber() {
+  int value = 0;
+
+  if (!this->IsNumber()) {
+    this->SyntaxError("Trying to parse this as a number");
+  }
+  if (this->type == Token_HexNumber) {
+    value = strtoi(this->text, this->length, 16);
+  } else {
+    value = strtoi(this->text, this->length, 10);
+  }
+
+  return value;
+}
+
 void Token::SyntaxError(char *string) {
   print("Syntax error at line %d: %s: '%.*s'\n", this->line_num, string,
         this->length, this->text);
@@ -266,23 +289,6 @@ Token *Assembler::RequireToken(TokenType type) {
   return token;
 }
 
-int atoi(char *string, int length, int base) {
-  int value = 0;
-  int digit = 0;
-  int power = 1;
-  for (int i = 0; i < length; i++) {
-    int c = tolower(string[length - i - 1]);
-    if ('a' <= c && c <= 'f') {
-      digit = 10 + (c - 'a');
-    } else {
-      digit = c - '0';
-    }
-    value += digit * power;
-    power *= base;
-  }
-  return value;
-}
-
 int Assembler::RequireNumber() {
   int value = 0;
   Token *token = this->NextToken();
@@ -291,11 +297,7 @@ int Assembler::RequireNumber() {
     this->SyntaxError("number expected, got");
   }
 
-  if (token->type == Token_HexNumber) {
-    value = atoi(token->text, token->length, 16);
-  } else if (token->type == Token_DecNumber) {
-    value = atoi(token->text, token->length, 10);
-  }
+  value = token->ParseNumber();
 
   if (value > 0xFFFF) {
     this->SyntaxError("Number is too big");
@@ -496,21 +498,21 @@ static int LoadProgram(char *filename, int memory_address) {
 
       case Token_Identifier: {
         instruction = assembler.NewInstruction();
-        uint supported_addressing = AM_IMPLIED;
+        uint modes = AM_NONE;  // supported addressing modes
 
         // Parse mnemonic
         if (token->Equals("lda")) {
           instruction->type = I_LDA;
-          supported_addressing = AM_ALL;
+          modes = AM_ALL;
         } else if (token->Equals("sta")) {
           instruction->type = I_STA;
-          supported_addressing = AM_ALL;
+          modes = AM_ALL;
         } else if (token->Equals("nop")) {
           instruction->type = I_NOP;
-          supported_addressing = AM_IMPLIED;
+          modes = AM_IMPLIED;
         } else if (token->Equals("jmp")) {
           instruction->type = I_JMP;
-          supported_addressing = AM_ABSOLUTE | AM_INDIRECT;
+          modes = AM_ABSOLUTE | AM_INDIRECT;
         } else {
           assembler.SyntaxError("Unknown command");
         }
@@ -518,17 +520,25 @@ static int LoadProgram(char *filename, int memory_address) {
         // Parse operand
         token = assembler.NextToken();
 
-        if (supported_addressing & AM_IMMEDIATE) {
-          if (token->type == Token_Hash) {
-            token = assembler.PeekToken();
-            if (token->type == Token_Identifier) {
-              instruction->deferred_operand = assembler.NextToken();
-            } else {
-              instruction->operand = assembler.RequireNumber();
-            }
+        if ((modes & AM_IMMEDIATE) && token->type == Token_Hash) {
+          token = assembler.PeekToken();
+          if (token->type == Token_Identifier) {
+            instruction->deferred_operand = assembler.NextToken();
+          } else {
+            instruction->operand = assembler.RequireNumber();
           }
+          instruction->mode = AM_IMMEDIATE;
+          break;
         }
 
+        if ((modes & (AM_ABSOLUTE | AM_INDEXED_X | AM_INDEXED_Y)) &&
+            (token->type == Token_Identifier || token->IsNumber())) {
+          if (token->type == Token_Identifier) {
+            instruction->deferred_operand = token;
+          } else {
+            instruction->operand = token->ParseNumber();
+          }
+        }
 
         // instruction->type = I_LDA;
         // token = assembler.NextToken();
