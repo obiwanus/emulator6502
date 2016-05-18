@@ -7,6 +7,15 @@
     lda #04
     sta $0206
 
+    sta ($02,x)
+
+    jmp $d400
+    jmp ($d400)
+
+    bmi some_label
+
+    inx
+
 end:
     nop
     jmp end

@@ -56,9 +56,11 @@ struct Tokenizer {
 #define AM_INDEXED_Y 0x10
 #define AM_INDIRECT_INDEXED_Y 0x20
 #define AM_INDEXED_X_INDIRECT 0x40
-#define AM_IMPLIED 0x80
 #define AM_ALL 0xFF
-#define AM_INDIRECT 0x100  // not included in AM_ALL
+
+// not included in AM_ALL
+#define AM_INDIRECT 0x100
+#define AM_IMPLIED 0x200
 
 enum InstructionType {
   I_NOP = 0,
@@ -83,6 +85,7 @@ enum InstructionType {
   I_STA,
   I_LDA,
   I_JMP,
+  I_INX,
 };
 
 struct Instruction {
@@ -396,7 +399,8 @@ Token *GetToken(Tokenizer *tokenizer) {
 
   char c = *tokenizer->at;
   if (IsAlpha(c)) {
-    while (!IsWhitespace(c) && c != ':' && c != '\0') {
+    while (!IsWhitespace(c) && c != ':' && c != '\0' && c != '(' && c != ')' &&
+           c != ',') {
       c = *++tokenizer->at;
       token->length++;
     }
@@ -513,8 +517,19 @@ static int LoadProgram(char *filename, int memory_address) {
         } else if (token->Equals("jmp")) {
           instruction->type = I_JMP;
           modes = AM_ABSOLUTE | AM_INDIRECT;
+        } else if (token->Equals("bmi")) {
+          instruction->type = I_BMI;
+          modes = AM_RELATIVE;
+        } else if (token->Equals("inx")) {
+          instruction->type = I_INX;
+          modes = AM_IMPLIED;
         } else {
           assembler.SyntaxError("Unknown command");
+        }
+
+        if (modes & AM_IMPLIED) {
+          // No operand required
+          break;
         }
 
         // Parse operand
@@ -554,7 +569,10 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
-        if ((modes & (AM_INDEXED_X_INDIRECT | AM_INDIRECT_INDEXED_Y | AM_INDIRECT)) && token->type == Token_OpenParen) {
+        if ((modes &
+             (AM_INDEXED_X_INDIRECT | AM_INDIRECT_INDEXED_Y | AM_INDIRECT)) &&
+            token->type == Token_OpenParen) {
+          token = assembler.NextToken();
           if (token->type == Token_Identifier) {
             instruction->deferred_operand = token;
           } else {
@@ -564,27 +582,42 @@ static int LoadProgram(char *filename, int memory_address) {
           if (modes & AM_INDIRECT) {
             assembler.RequireToken(Token_CloseParen);
             instruction->mode = AM_INDIRECT;
-          } else if (modes & AM_INDIRECT_INDEXED_Y) {
-            assembler.RequireToken(Token_CloseParen);
-            assembler.RequireToken(Token_Comma);
+          } else {
             token = assembler.NextToken();
-            if (token->Equals("y")) {
-              instruction->mode = AM_INDIRECT_INDEXED_Y;
+            if (token->type == Token_CloseParen &&
+                (modes & AM_INDIRECT_INDEXED_Y)) {
+              assembler.RequireToken(Token_Comma);
+              token = assembler.NextToken();
+              if (token->Equals("y")) {
+                instruction->mode = AM_INDIRECT_INDEXED_Y;
+              } else {
+                token->SyntaxError("Y expected, got");
+              }
+            } else if (token->type == Token_Comma &&
+                       (modes & AM_INDEXED_X_INDIRECT)) {
+              token = assembler.NextToken();
+              if (token->Equals("X")) {
+                instruction->mode = AM_INDEXED_X_INDIRECT;
+              } else {
+                token->SyntaxError("X expected, got");
+              }
+              assembler.RequireToken(Token_CloseParen);
             } else {
-              token->SyntaxError("Y expected, got");
+              token->SyntaxError(") or , expected, got");
             }
-          } else if (modes & AM_INDEXED_X_INDIRECT) {
-            assembler.RequireToken(Token_Comma);
-            token = assembler.NextToken();
-            if (token->Equals("X")) {
-              instruction->mode = AM_INDEXED_X_INDIRECT;
-            } else {
-              token->SyntaxError("X expected, got");
-            }
-            assembler.RequireToken(Token_CloseParen);
           }
           break;
         }
+
+        if ((modes & AM_RELATIVE) && token->type == Token_Identifier) {
+          // We don't support offsets (yet?), only labels
+          instruction->deferred_operand = token;
+          instruction->mode = AM_RELATIVE;
+          break;
+        }
+
+        // Couldn't match operand
+        token->SyntaxError("Incorrect operand");
 
         // instruction->type = I_LDA;
         // token = assembler.NextToken();
