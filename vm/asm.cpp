@@ -52,16 +52,19 @@ struct Tokenizer {
 #define AM_IMMEDIATE 0x01
 #define AM_ABSOLUTE 0x02
 #define AM_RELATIVE 0x04
-#define AM_INDEXED_X 0x08
-#define AM_INDEXED_Y 0x10
-#define AM_INDIRECT_INDEXED_Y 0x20
-#define AM_INDEXED_X_INDIRECT 0x40
-#define AM_MOST_COMMON 0xFF
+#define AM_ABSOLUTE_X 0x08
+#define AM_ABSOLUTE_Y 0x10
+#define AM_ZERO_PAGE 0x20
+#define AM_ZERO_PAGE_X 0x40
+#define AM_ZERO_PAGE_Y 0x80
+#define AM_INDIRECT_INDEXED_Y 0x100
+#define AM_INDEXED_X_INDIRECT 0x200
+#define AM_MOST_COMMON 0x3FF
 
 // not included in AM_MOST_COMMON
-#define AM_INDIRECT 0x100
-#define AM_IMPLIED 0x200
-#define AM_ACCUMULATOR 0x400
+#define AM_INDIRECT 0x400
+#define AM_IMPLIED 0x800
+#define AM_ACCUMULATOR 0x1000
 
 enum InstructionType {
   I_NOP = 0,
@@ -125,6 +128,7 @@ enum InstructionType {
 struct Instruction {
   InstructionType type;
   uint mode;
+  u32 modes;  // supported addressing modes
   int operand;
   Token *deferred_operand;  // to be looked up in the symbol table
 };
@@ -536,45 +540,46 @@ static int LoadProgram(char *filename, int memory_address) {
 
       case Token_Identifier: {
         instruction = assembler.NewInstruction();
-        uint modes = AM_NONE;  // supported addressing modes
 
         // Parse mnemonic
         if (token->Equals("ADC")) {
           instruction->type = I_ADC;
-          modes = AM_MOST_COMMON;
+          instruction->modes = AM_MOST_COMMON;
         } else if (token->Equals("AND")) {
           instruction->type = I_AND;
-          modes = AM_MOST_COMMON;
+          instruction->modes = AM_MOST_COMMON;
         } else if (token->Equals("ASL")) {
           instruction->type = I_ASL;
-          modes = AM_ACCUMULATOR | AM_ABSOLUTE | AM_INDEXED_X;
+          instruction->modes = AM_ACCUMULATOR | AM_ABSOLUTE | AM_ABSOLUTE_X;
         } else if (token->Equals("BCC")) {
           instruction->type = I_BCC;
-          modes = AM_RELATIVE;
+          instruction->modes = AM_RELATIVE;
         } else if (token->Equals("BCS")) {
           instruction->type = I_BCS;
-          modes = AM_RELATIVE;
+          instruction->modes = AM_RELATIVE;
         } else if (token->Equals("LDA")) {
           instruction->type = I_STA;
-          modes = AM_MOST_COMMON;
+          instruction->modes = AM_MOST_COMMON;
         } else if (token->Equals("STA")) {
           instruction->type = I_STA;
-          modes = AM_MOST_COMMON & ~AM_IMMEDIATE;
+          instruction->modes = AM_MOST_COMMON & ~AM_IMMEDIATE;
         } else if (token->Equals("NOP")) {
           instruction->type = I_NOP;
-          modes = AM_IMPLIED;
+          instruction->modes = AM_IMPLIED;
         } else if (token->Equals("JMP")) {
           instruction->type = I_JMP;
-          modes = AM_ABSOLUTE | AM_INDIRECT;
+          instruction->modes = AM_ABSOLUTE | AM_INDIRECT;
         } else if (token->Equals("BMI")) {
           instruction->type = I_BMI;
-          modes = AM_RELATIVE;
+          instruction->modes = AM_RELATIVE;
         } else if (token->Equals("INX")) {
           instruction->type = I_INX;
-          modes = AM_IMPLIED;
+          instruction->modes = AM_IMPLIED;
         } else {
           assembler.SyntaxError("Unknown command");
         }
+
+        u32 modes = instruction->modes;
 
         if (modes & AM_IMPLIED) {
           // No operand required
@@ -595,7 +600,7 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
-        if ((modes & (AM_ABSOLUTE | AM_INDEXED_X | AM_INDEXED_Y)) &&
+        if ((modes & (AM_ABSOLUTE | AM_ABSOLUTE_X | AM_ABSOLUTE_Y)) &&
             (token->type == Token_Identifier || token->IsNumber())) {
           if (token->type == Token_Identifier) {
             instruction->deferred_operand = token;
@@ -606,9 +611,9 @@ static int LoadProgram(char *filename, int memory_address) {
             assembler.NextToken();  // skip the comma
             token = assembler.NextToken();
             if (token->Equals("x")) {
-              instruction->mode = AM_INDEXED_X;
+              instruction->mode = AM_ABSOLUTE_X;
             } else if (token->Equals("y")) {
-              instruction->mode = AM_INDEXED_Y;
+              instruction->mode = AM_ABSOLUTE_Y;
             } else {
               token->SyntaxError("X or Y expected, got");
             }
@@ -665,7 +670,8 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
-        if ((modes & AM_ACCUMULATOR) && token->type == Token_Identifier && token->Equals("A")) {
+        if ((modes & AM_ACCUMULATOR) && token->type == Token_Identifier &&
+            token->Equals("A")) {
           instruction->mode = AM_ACCUMULATOR;
           break;
         }
@@ -686,6 +692,35 @@ static int LoadProgram(char *filename, int memory_address) {
   codegen.at_instruction = assembler.instructions;
 
   for (int i = 0; i < assembler.num_instructions; i++) {
+    instruction = assembler.instructions + i;
+
+    // Resolve deferred operand
+    if (instruction->deferred_operand != NULL) {
+      SymbolTableEntry *entry =
+          symbol_table.GetEntry(instruction->deferred_operand);
+      if (entry == NULL) {
+        instruction->deferred_operand->SyntaxError("Unknown identifier");
+      } else {
+        instruction->operand = entry->value;
+      }
+    }
+
+    // Check for zero-page allowance
+    if ((instruction->mode == AM_ABSOLUTE &&
+         !(instruction->modes & AM_ZERO_PAGE)) ||
+        (instruction->mode == AM_ABSOLUTE_X &&
+         !(instruction->modes & AM_ZERO_PAGE_X)) ||
+        (instruction->mode == AM_ABSOLUTE_Y &&
+         !(instruction->modes & AM_ZERO_PAGE_Y))) {
+      if (instruction->operand > 0xFF) {
+        // TODO: syntax error
+      }
+    }
+
+    switch (instruction->type) {
+      case I_ADC: {
+      } break;
+    }
   }
 
   print("Assembling of %s finished\n", filename);

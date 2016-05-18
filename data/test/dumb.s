@@ -12,7 +12,7 @@
     jmp $d400
     jmp ($d400)
 
-    bmi some_label
+    bmi end
 
     inx
 
