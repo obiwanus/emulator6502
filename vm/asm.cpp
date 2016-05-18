@@ -56,11 +56,12 @@ struct Tokenizer {
 #define AM_INDEXED_Y 0x10
 #define AM_INDIRECT_INDEXED_Y 0x20
 #define AM_INDEXED_X_INDIRECT 0x40
-#define AM_ALL 0xFF
+#define AM_MOST_COMMON 0xFF
 
-// not included in AM_ALL
+// not included in AM_MOST_COMMON
 #define AM_INDIRECT 0x100
 #define AM_IMPLIED 0x200
+#define AM_ACCUMULATOR 0x400
 
 enum InstructionType {
   I_NOP = 0,
@@ -119,7 +120,6 @@ enum InstructionType {
   I_TXA,
   I_TXS,
   I_TYA,
-
 };
 
 struct Instruction {
@@ -255,7 +255,7 @@ SymbolTableEntry *SymbolTable::GetEntry(Token *token) {
 
 bool Token::Equals(char *string) {
   for (int i = 0; i < this->length; i++) {
-    if (string[i] == '\0' || tolower(string[i]) != tolower(this->text[i])) {
+    if (string[i] == '\0' || toupper(string[i]) != toupper(this->text[i])) {
       return false;
     }
   }
@@ -539,22 +539,37 @@ static int LoadProgram(char *filename, int memory_address) {
         uint modes = AM_NONE;  // supported addressing modes
 
         // Parse mnemonic
-        if (token->Equals("lda")) {
-          instruction->type = I_LDA;
-          modes = AM_ALL;
-        } else if (token->Equals("sta")) {
+        if (token->Equals("ADC")) {
+          instruction->type = I_ADC;
+          modes = AM_MOST_COMMON;
+        } else if (token->Equals("AND")) {
+          instruction->type = I_AND;
+          modes = AM_MOST_COMMON;
+        } else if (token->Equals("ASL")) {
+          instruction->type = I_ASL;
+          modes = AM_ACCUMULATOR | AM_ABSOLUTE | AM_INDEXED_X;
+        } else if (token->Equals("BCC")) {
+          instruction->type = I_BCC;
+          modes = AM_RELATIVE;
+        } else if (token->Equals("BCS")) {
+          instruction->type = I_BCS;
+          modes = AM_RELATIVE;
+        } else if (token->Equals("LDA")) {
           instruction->type = I_STA;
-          modes = AM_ALL;
-        } else if (token->Equals("nop")) {
+          modes = AM_MOST_COMMON;
+        } else if (token->Equals("STA")) {
+          instruction->type = I_STA;
+          modes = AM_MOST_COMMON & ~AM_IMMEDIATE;
+        } else if (token->Equals("NOP")) {
           instruction->type = I_NOP;
           modes = AM_IMPLIED;
-        } else if (token->Equals("jmp")) {
+        } else if (token->Equals("JMP")) {
           instruction->type = I_JMP;
           modes = AM_ABSOLUTE | AM_INDIRECT;
-        } else if (token->Equals("bmi")) {
+        } else if (token->Equals("BMI")) {
           instruction->type = I_BMI;
           modes = AM_RELATIVE;
-        } else if (token->Equals("inx")) {
+        } else if (token->Equals("INX")) {
           instruction->type = I_INX;
           modes = AM_IMPLIED;
         } else {
@@ -650,55 +665,13 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
+        if ((modes & AM_ACCUMULATOR) && token->type == Token_Identifier && token->Equals("A")) {
+          instruction->mode = AM_ACCUMULATOR;
+          break;
+        }
+
         // Couldn't match operand
         token->SyntaxError("Incorrect operand");
-
-        // instruction->type = I_LDA;
-        // token = assembler.NextToken();
-        // if (token->type == Token_Hash) {
-        //   instruction->mode = AM_IMMEDIATE;
-        //   instruction->operand = assembler.RequireNumber();
-
-        // } else if (token->type == Token_Identifier) {
-        //   // TODO: symbol table
-        //   assembler.SyntaxError("not implemented");
-        //   assembler.NextToken();
-        // } else {
-        //   assembler.PrevToken();
-        //   instruction->operand = assembler.RequireNumber();
-        //   instruction->mode = AM_ABSOLUTE;
-        // }
-        // } else if (token->Equals("sta")) {
-        //   instruction->type = I_STA;
-        //   token = assembler.PeekToken();
-        //   if (token->type == Token_Identifier) {
-        //     // TODO: symbol table
-        //     assembler.SyntaxError("not implemented");
-        //     assembler.NextToken();
-        //   } else {
-        //     instruction->operand = assembler.RequireNumber();
-        //     instruction->mode = AM_ABSOLUTE;
-        //   }
-        // } else if (token->Equals("nop")) {
-        //   // a command for lazy cpus
-        //   instruction->type = I_NOP;
-        // } else if (token->Equals("jmp")) {
-        //   instruction->type = I_JMP;
-        //   token = assembler.PeekToken();
-        //   if (token->type == Token_Identifier) {
-        //     token = assembler.NextToken();
-        //     SymbolTableEntry *entry = symbol_table.GetEntry(token);
-        //     if (entry == NULL) {
-        //       instruction->deferred_operand = token;
-        //     } else {
-        //       instruction->operand = entry->value;
-        //     }
-        //   } else {
-        //     instruction->operand = assembler.RequireNumber();
-        //   }
-        // } else {
-        //   assembler.SyntaxError("Unknown command");
-        // }
       } break;
 
       default: {
