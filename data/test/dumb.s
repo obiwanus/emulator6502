@@ -1,7 +1,7 @@
     lda #01
     sta $0200
     lda #02
-    sta $0202
+    sta $0202,x
     lda #03
     sta $0204
     lda #04

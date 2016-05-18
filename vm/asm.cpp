@@ -538,6 +538,52 @@ static int LoadProgram(char *filename, int memory_address) {
           } else {
             instruction->operand = token->ParseNumber();
           }
+          if (assembler.PeekToken()->type == Token_Comma) {
+            assembler.NextToken();  // skip the comma
+            token = assembler.NextToken();
+            if (token->Equals("x")) {
+              instruction->mode = AM_INDEXED_X;
+            } else if (token->Equals("y")) {
+              instruction->mode = AM_INDEXED_Y;
+            } else {
+              token->SyntaxError("X or Y expected, got");
+            }
+          } else {
+            instruction->mode = AM_ABSOLUTE;
+          }
+          break;
+        }
+
+        if ((modes & (AM_INDEXED_X_INDIRECT | AM_INDIRECT_INDEXED_Y | AM_INDIRECT)) && token->type == Token_OpenParen) {
+          if (token->type == Token_Identifier) {
+            instruction->deferred_operand = token;
+          } else {
+            assembler.PrevToken();
+            instruction->operand = assembler.RequireNumber();
+          }
+          if (modes & AM_INDIRECT) {
+            assembler.RequireToken(Token_CloseParen);
+            instruction->mode = AM_INDIRECT;
+          } else if (modes & AM_INDIRECT_INDEXED_Y) {
+            assembler.RequireToken(Token_CloseParen);
+            assembler.RequireToken(Token_Comma);
+            token = assembler.NextToken();
+            if (token->Equals("y")) {
+              instruction->mode = AM_INDIRECT_INDEXED_Y;
+            } else {
+              token->SyntaxError("Y expected, got");
+            }
+          } else if (modes & AM_INDEXED_X_INDIRECT) {
+            assembler.RequireToken(Token_Comma);
+            token = assembler.NextToken();
+            if (token->Equals("X")) {
+              instruction->mode = AM_INDEXED_X_INDIRECT;
+            } else {
+              token->SyntaxError("X expected, got");
+            }
+            assembler.RequireToken(Token_CloseParen);
+          }
+          break;
         }
 
         // instruction->type = I_LDA;
