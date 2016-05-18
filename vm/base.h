@@ -14,6 +14,7 @@ typedef int64_t i64;
 typedef float r32;
 typedef double r64;
 typedef i32 bool32;
+typedef unsigned int uint;
 
 #define global static
 #define local_persist static

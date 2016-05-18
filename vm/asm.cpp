@@ -44,20 +44,21 @@ struct Tokenizer {
   Token *NewToken();
 };
 
-enum AddressingMode {
-  AM_Implied = 0,
-  AM_Immediate,
-  AM_Absolute,
-  AM_Relative,
-  AM_Indexed_X,
-  AM_Indexed_Y,
-  AM_Indirect,
-  AM_Indirect_Indexed_Y,
-  AM_Indexed_X_Indirect,
-};
+// Addressing modes
+#define AM_IMPLIED 0x00
+#define AM_IMMEDIATE 0x01
+#define AM_ABSOLUTE 0x02
+#define AM_RELATIVE 0x04
+#define AM_INDEXED_X 0x08
+#define AM_INDEXED_Y 0x10
+#define AM_INDIRECT_INDEXED_Y 0x20
+#define AM_INDEXED_X_INDIRECT 0x40
+#define AM_ALL 0xFF
+#define AM_INDIRECT 0x100  // not included in AM_ALL
 
 enum InstructionType {
-  I_ADC = 0,
+  I_NOP = 0,
+  I_ADC,
   I_AND,
   I_ASL,
   I_BCC,
@@ -78,14 +79,13 @@ enum InstructionType {
   I_STA,
   I_LDA,
   I_JMP,
-  I_NOP,
 };
 
 struct Instruction {
   InstructionType type;
-  AddressingMode mode;
-  int address;
-  Instruction *points_to_instruction;
+  uint mode;
+  int operand;
+  Token *deferred_operand;  // to be looked up in the symbol table
 };
 
 struct SymbolTableEntry {
@@ -108,6 +108,46 @@ struct SymbolTable {
   SymbolTableEntry *GetEntry(Token *);
   void AllocateSpaceIfNeeded(Token *);
 };
+
+struct Assembler {
+  u8 *at_memory;
+  Token *at_token;
+
+  Token *NextToken();
+  Token *PrevToken();
+  Token *PeekToken();
+  Token *RequireToken(TokenType);
+  int RequireNumber();
+
+  Instruction *instructions;
+  int num_instructions;
+  int instructions_allocated;
+
+  Instruction *NewInstruction();
+
+  void SyntaxError(char *);
+};
+
+struct CodeGenerator {
+  u8 *at_memory;
+  Instruction *at_instruction;
+};
+
+Token *Tokenizer::NewToken() {
+  if (this->tokens_allocated == 0) {
+    this->tokens_allocated = 1000;
+    this->tokens = (Token *)malloc(this->tokens_allocated * sizeof(Token));
+  } else if (this->num_tokens >= this->tokens_allocated - 2) {
+    this->tokens_allocated *= 2;
+    this->tokens =
+        (Token *)realloc(this->tokens, this->tokens_allocated * sizeof(Token));
+  }
+
+  Token *result = this->tokens + this->num_tokens;
+  this->num_tokens++;
+
+  return result;
+}
 
 SymbolTable::SymbolTable() {
   this->space_allocated = 10000;
@@ -168,46 +208,8 @@ SymbolTableEntry *SymbolTable::GetEntry(Token *token) {
       break;
     }
   }
-  if (entry == NULL) {
-    token->SyntaxError("Undeclared identifier");
-  }
 
   return entry;
-}
-
-struct Assembler {
-  u8 *at_memory;
-  Token *at_token;
-
-  Token *NextToken();
-  Token *PrevToken();
-  Token *PeekToken();
-  Token *RequireToken(TokenType);
-  int RequireNumber();
-
-  Instruction *instructions;
-  int num_instructions;
-  int instructions_allocated;
-
-  Instruction *NewInstruction();
-
-  void SyntaxError(char *);
-};
-
-Token *Tokenizer::NewToken() {
-  if (this->tokens_allocated == 0) {
-    this->tokens_allocated = 1000;
-    this->tokens = (Token *)malloc(this->tokens_allocated * sizeof(Token));
-  } else if (this->num_tokens >= this->tokens_allocated - 2) {
-    this->tokens_allocated *= 2;
-    this->tokens =
-        (Token *)realloc(this->tokens, this->tokens_allocated * sizeof(Token));
-  }
-
-  Token *result = this->tokens + this->num_tokens;
-  this->num_tokens++;
-
-  return result;
 }
 
 bool Token::Equals(char *string) {
@@ -316,6 +318,7 @@ Instruction *Assembler::NewInstruction() {
   }
 
   Instruction *result = this->instructions + this->num_instructions;
+  *result = {};
   this->num_instructions++;
 
   return result;
@@ -471,13 +474,13 @@ static int LoadProgram(char *filename, int memory_address) {
   }
 
   Assembler assembler = {};
-  assembler.at_memory = (u8 *)gMachineMemory + memory_address;
   assembler.at_token = tokenizer.tokens;
 
-  bool parsing = true;
   Token *token = assembler.at_token;
-  Instruction *instruction = assembler.instructions;
   SymbolTable symbol_table = SymbolTable();
+  Instruction *instruction = assembler.instructions;
+
+  bool parsing = true;
 
   while (parsing) {
     switch (token->type) {
@@ -493,53 +496,86 @@ static int LoadProgram(char *filename, int memory_address) {
 
       case Token_Identifier: {
         instruction = assembler.NewInstruction();
+        uint supported_addressing = AM_IMPLIED;
 
+        // Parse mnemonic
         if (token->Equals("lda")) {
           instruction->type = I_LDA;
-          token = assembler.NextToken();
-          if (token->type == Token_Hash) {
-            instruction->address = assembler.RequireNumber();
-            instruction->mode = AM_Immediate;
-          } else if (token->type == Token_Identifier) {
-            // TODO: symbol table
-            assembler.SyntaxError("not implemented");
-            assembler.NextToken();
-          } else {
-            assembler.PrevToken();
-            instruction->address = assembler.RequireNumber();
-            instruction->mode = AM_Absolute;
-          }
+          supported_addressing = AM_ALL;
         } else if (token->Equals("sta")) {
           instruction->type = I_STA;
-          token = assembler.PeekToken();
-          if (token->type == Token_Identifier) {
-            // TODO: symbol table
-            assembler.SyntaxError("not implemented");
-            assembler.NextToken();
-          } else {
-            instruction->address = assembler.RequireNumber();
-            instruction->mode = AM_Absolute;
-          }
+          supported_addressing = AM_ALL;
         } else if (token->Equals("nop")) {
-          // a command for lazy cpus
           instruction->type = I_NOP;
+          supported_addressing = AM_IMPLIED;
         } else if (token->Equals("jmp")) {
           instruction->type = I_JMP;
-          token = assembler.PeekToken();
-          if (token->type == Token_Identifier) {
-            token = assembler.NextToken();
-            SymbolTableEntry *entry = symbol_table.GetEntry(token);
-            if (entry->instruction != NULL) {
-              instruction->points_to_instruction = entry->instruction;
-            } else {
-              instruction->address = entry->value;
-            }
-          } else {
-            instruction->address = assembler.RequireNumber();
-          }
+          supported_addressing = AM_ABSOLUTE | AM_INDIRECT;
         } else {
           assembler.SyntaxError("Unknown command");
         }
+
+        // Parse operand
+        token = assembler.NextToken();
+
+        if (supported_addressing & AM_IMMEDIATE) {
+          if (token->type == Token_Hash) {
+            token = assembler.PeekToken();
+            if (token->type == Token_Identifier) {
+              instruction->deferred_operand = assembler.NextToken();
+            } else {
+              instruction->operand = assembler.RequireNumber();
+            }
+          }
+        }
+
+
+        // instruction->type = I_LDA;
+        // token = assembler.NextToken();
+        // if (token->type == Token_Hash) {
+        //   instruction->mode = AM_IMMEDIATE;
+        //   instruction->operand = assembler.RequireNumber();
+
+        // } else if (token->type == Token_Identifier) {
+        //   // TODO: symbol table
+        //   assembler.SyntaxError("not implemented");
+        //   assembler.NextToken();
+        // } else {
+        //   assembler.PrevToken();
+        //   instruction->operand = assembler.RequireNumber();
+        //   instruction->mode = AM_ABSOLUTE;
+        // }
+        // } else if (token->Equals("sta")) {
+        //   instruction->type = I_STA;
+        //   token = assembler.PeekToken();
+        //   if (token->type == Token_Identifier) {
+        //     // TODO: symbol table
+        //     assembler.SyntaxError("not implemented");
+        //     assembler.NextToken();
+        //   } else {
+        //     instruction->operand = assembler.RequireNumber();
+        //     instruction->mode = AM_ABSOLUTE;
+        //   }
+        // } else if (token->Equals("nop")) {
+        //   // a command for lazy cpus
+        //   instruction->type = I_NOP;
+        // } else if (token->Equals("jmp")) {
+        //   instruction->type = I_JMP;
+        //   token = assembler.PeekToken();
+        //   if (token->type == Token_Identifier) {
+        //     token = assembler.NextToken();
+        //     SymbolTableEntry *entry = symbol_table.GetEntry(token);
+        //     if (entry == NULL) {
+        //       instruction->deferred_operand = token;
+        //     } else {
+        //       instruction->operand = entry->value;
+        //     }
+        //   } else {
+        //     instruction->operand = assembler.RequireNumber();
+        //   }
+        // } else {
+        //   assembler.SyntaxError("Unknown command");
+        // }
       } break;
 
       default: {
@@ -548,6 +584,14 @@ static int LoadProgram(char *filename, int memory_address) {
     }
     token = assembler.NextToken();
   }
+
+  CodeGenerator codegen = {};
+  codegen.at_memory = (u8 *)gMachineMemory + memory_address;
+  codegen.at_instruction = assembler.instructions;
+
+  for (int i = 0; i < assembler.num_instructions; i++) {
+  }
+
   print("Assembling of %s finished\n", filename);
 
   return 0;
