@@ -47,24 +47,40 @@ struct Tokenizer {
   Token *NewToken();
 };
 
-// Addressing modes
-#define AM_NONE 0x00
-#define AM_IMMEDIATE 0x01
-#define AM_ABSOLUTE 0x02
-#define AM_RELATIVE 0x04
-#define AM_ABSOLUTE_X 0x08
-#define AM_ABSOLUTE_Y 0x10
-#define AM_ZERO_PAGE 0x20
-#define AM_ZERO_PAGE_X 0x40
-#define AM_ZERO_PAGE_Y 0x80
-#define AM_INDIRECT_INDEXED_Y 0x100
-#define AM_INDEXED_X_INDIRECT 0x200
-#define AM_MOST_COMMON 0x3FF
+// Addressing mode flags
+#define AMF_NONE 0x00
+#define AMF_IMMEDIATE 0x01
+#define AMF_ABSOLUTE 0x02
+#define AMF_RELATIVE 0x04
+#define AMF_ABSOLUTE_X 0x08
+#define AMF_ABSOLUTE_Y 0x10
+#define AMF_ZERO_PAGE 0x20
+#define AMF_ZERO_PAGE_X 0x40
+#define AMF_ZERO_PAGE_Y 0x80
+#define AMF_INDIRECT_Y 0x100
+#define AMF_INDIRECT_X 0x200
+#define AMF_MOST_COMMON 0x3FF
 
-// not included in AM_MOST_COMMON
-#define AM_INDIRECT 0x400
-#define AM_IMPLIED 0x800
-#define AM_ACCUMULATOR 0x1000
+// not included in AMF_MOST_COMMON
+#define AMF_INDIRECT 0x400
+#define AMF_IMPLIED 0x800
+#define AMF_ACCUMULATOR 0x1000
+
+enum AddressingMode {
+  AM_Immediate = 1,
+  AM_Absolute,
+  AM_Relative,
+  AM_Absolute_X,
+  AM_Absolute_Y,
+  AM_Zeropage,
+  AM_Zeropage_X,
+  AM_Zeropage_Y,
+  AM_Indirect_X,
+  AM_Indirect_Y,
+  AM_Indirect,
+  AM_Implied,
+  AM_Accumulator,
+};
 
 enum InstructionType {
   I_NOP = 0,
@@ -127,10 +143,11 @@ enum InstructionType {
 
 struct Instruction {
   InstructionType type;
-  uint mode;
+  AddressingMode mode;
   u32 modes;  // supported addressing modes
   int operand;
   Token *deferred_operand;  // to be looked up in the symbol table
+  Token *mnemonic;          // for error reporting
 };
 
 struct SymbolTableEntry {
@@ -540,48 +557,49 @@ static int LoadProgram(char *filename, int memory_address) {
 
       case Token_Identifier: {
         instruction = assembler.NewInstruction();
+        instruction->mnemonic = token;
 
         // Parse mnemonic
         if (token->Equals("ADC")) {
           instruction->type = I_ADC;
-          instruction->modes = AM_MOST_COMMON;
+          instruction->modes = AMF_MOST_COMMON;
         } else if (token->Equals("AND")) {
           instruction->type = I_AND;
-          instruction->modes = AM_MOST_COMMON;
+          instruction->modes = AMF_MOST_COMMON;
         } else if (token->Equals("ASL")) {
           instruction->type = I_ASL;
-          instruction->modes = AM_ACCUMULATOR | AM_ABSOLUTE | AM_ABSOLUTE_X;
+          instruction->modes = AMF_ACCUMULATOR | AMF_ABSOLUTE | AMF_ABSOLUTE_X;
         } else if (token->Equals("BCC")) {
           instruction->type = I_BCC;
-          instruction->modes = AM_RELATIVE;
+          instruction->modes = AMF_RELATIVE;
         } else if (token->Equals("BCS")) {
           instruction->type = I_BCS;
-          instruction->modes = AM_RELATIVE;
+          instruction->modes = AMF_RELATIVE;
         } else if (token->Equals("LDA")) {
           instruction->type = I_STA;
-          instruction->modes = AM_MOST_COMMON;
+          instruction->modes = AMF_MOST_COMMON;
         } else if (token->Equals("STA")) {
           instruction->type = I_STA;
-          instruction->modes = AM_MOST_COMMON & ~AM_IMMEDIATE;
+          instruction->modes = AMF_MOST_COMMON & ~AMF_IMMEDIATE;
         } else if (token->Equals("NOP")) {
           instruction->type = I_NOP;
-          instruction->modes = AM_IMPLIED;
+          instruction->modes = AMF_IMPLIED;
         } else if (token->Equals("JMP")) {
           instruction->type = I_JMP;
-          instruction->modes = AM_ABSOLUTE | AM_INDIRECT;
+          instruction->modes = AMF_ABSOLUTE | AMF_INDIRECT;
         } else if (token->Equals("BMI")) {
           instruction->type = I_BMI;
-          instruction->modes = AM_RELATIVE;
+          instruction->modes = AMF_RELATIVE;
         } else if (token->Equals("INX")) {
           instruction->type = I_INX;
-          instruction->modes = AM_IMPLIED;
+          instruction->modes = AMF_IMPLIED;
         } else {
           assembler.SyntaxError("Unknown command");
         }
 
         u32 modes = instruction->modes;
 
-        if (modes & AM_IMPLIED) {
+        if (modes & AMF_IMPLIED) {
           // No operand required
           break;
         }
@@ -589,18 +607,19 @@ static int LoadProgram(char *filename, int memory_address) {
         // Parse operand
         token = assembler.NextToken();
 
-        if ((modes & AM_IMMEDIATE) && token->type == Token_Hash) {
+        if ((modes & AMF_IMMEDIATE) && token->type == Token_Hash) {
           token = assembler.PeekToken();
           if (token->type == Token_Identifier) {
             instruction->deferred_operand = assembler.NextToken();
           } else {
             instruction->operand = assembler.RequireNumber();
           }
-          instruction->mode = AM_IMMEDIATE;
+          instruction->mode = AM_Immediate;
           break;
         }
 
-        if ((modes & (AM_ABSOLUTE | AM_ABSOLUTE_X | AM_ABSOLUTE_Y)) &&
+        if ((modes & (AMF_ABSOLUTE | AMF_ABSOLUTE_X | AMF_ABSOLUTE_Y |
+                      AMF_ZERO_PAGE | AMF_ZERO_PAGE_X | AMF_ZERO_PAGE_Y)) &&
             (token->type == Token_Identifier || token->IsNumber())) {
           if (token->type == Token_Identifier) {
             instruction->deferred_operand = token;
@@ -611,20 +630,20 @@ static int LoadProgram(char *filename, int memory_address) {
             assembler.NextToken();  // skip the comma
             token = assembler.NextToken();
             if (token->Equals("x")) {
-              instruction->mode = AM_ABSOLUTE_X;
+              instruction->mode = AM_Absolute_X;
             } else if (token->Equals("y")) {
-              instruction->mode = AM_ABSOLUTE_Y;
+              instruction->mode = AM_Absolute_Y;
             } else {
               token->SyntaxError("X or Y expected, got");
             }
           } else {
-            instruction->mode = AM_ABSOLUTE;
+            instruction->mode = AM_Absolute;
           }
           break;
         }
 
         if ((modes &
-             (AM_INDEXED_X_INDIRECT | AM_INDIRECT_INDEXED_Y | AM_INDIRECT)) &&
+             (AMF_INDIRECT_X | AMF_INDIRECT_Y | AMF_INDIRECT)) &&
             token->type == Token_OpenParen) {
           token = assembler.NextToken();
           if (token->type == Token_Identifier) {
@@ -633,25 +652,25 @@ static int LoadProgram(char *filename, int memory_address) {
             assembler.PrevToken();
             instruction->operand = assembler.RequireNumber();
           }
-          if (modes & AM_INDIRECT) {
+          if (modes & AMF_INDIRECT) {
             assembler.RequireToken(Token_CloseParen);
-            instruction->mode = AM_INDIRECT;
+            instruction->mode = AM_Indirect;
           } else {
             token = assembler.NextToken();
             if (token->type == Token_CloseParen &&
-                (modes & AM_INDIRECT_INDEXED_Y)) {
+                (modes & AMF_INDIRECT_Y)) {
               assembler.RequireToken(Token_Comma);
               token = assembler.NextToken();
               if (token->Equals("y")) {
-                instruction->mode = AM_INDIRECT_INDEXED_Y;
+                instruction->mode = AM_Indirect_Y;
               } else {
                 token->SyntaxError("Y expected, got");
               }
             } else if (token->type == Token_Comma &&
-                       (modes & AM_INDEXED_X_INDIRECT)) {
+                       (modes & AMF_INDIRECT_X)) {
               token = assembler.NextToken();
               if (token->Equals("X")) {
-                instruction->mode = AM_INDEXED_X_INDIRECT;
+                instruction->mode = AM_Indirect_X;
               } else {
                 token->SyntaxError("X expected, got");
               }
@@ -663,16 +682,16 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
-        if ((modes & AM_RELATIVE) && token->type == Token_Identifier) {
+        if ((modes & AMF_RELATIVE) && token->type == Token_Identifier) {
           // We don't support offsets (yet?), only labels
           instruction->deferred_operand = token;
-          instruction->mode = AM_RELATIVE;
+          instruction->mode = AM_Relative;
           break;
         }
 
-        if ((modes & AM_ACCUMULATOR) && token->type == Token_Identifier &&
+        if ((modes & AMF_ACCUMULATOR) && token->type == Token_Identifier &&
             token->Equals("A")) {
-          instruction->mode = AM_ACCUMULATOR;
+          instruction->mode = AM_Accumulator;
           break;
         }
 
@@ -705,21 +724,123 @@ static int LoadProgram(char *filename, int memory_address) {
       }
     }
 
-    // Check for zero-page allowance
-    if ((instruction->mode == AM_ABSOLUTE &&
-         !(instruction->modes & AM_ZERO_PAGE)) ||
-        (instruction->mode == AM_ABSOLUTE_X &&
-         !(instruction->modes & AM_ZERO_PAGE_X)) ||
-        (instruction->mode == AM_ABSOLUTE_Y &&
-         !(instruction->modes & AM_ZERO_PAGE_Y))) {
+    if ((instruction->mode == AMF_ABSOLUTE &&
+         !(instruction->modes & AMF_ABSOLUTE)) ||
+        (instruction->mode == AMF_ABSOLUTE_X &&
+         !(instruction->modes & AMF_ABSOLUTE_X)) ||
+        (instruction->mode == AMF_ABSOLUTE_Y &&
+         !(instruction->modes & AMF_ABSOLUTE_Y))) {
       if (instruction->operand > 0xFF) {
-        // TODO: syntax error
+        instruction->mnemonic->SyntaxError(
+            "Only zero page addressing is supported");
       }
     }
 
+    if (instruction->mode == AMF_ABSOLUTE &&
+        (instruction->modes & AMF_ZERO_PAGE) && instruction->operand <= 0xFF) {
+      instruction->mode = AM_Zeropage;
+    }
+    if (instruction->mode == AMF_ABSOLUTE_X &&
+        (instruction->modes & AMF_ZERO_PAGE_X) && instruction->operand <= 0xFF) {
+      instruction->mode = AM_Zeropage_X;
+    }
+    if (instruction->mode == AMF_ABSOLUTE_Y &&
+        (instruction->modes & AMF_ZERO_PAGE_Y) && instruction->operand <= 0xFF) {
+      instruction->mode = AM_Zeropage_Y;
+    }
+
+    u8 opcode = 0;
+    AddressingMode mode = instruction->mode;
+    bool error = false;
+
     switch (instruction->type) {
       case I_ADC: {
+        if (mode == AM_Immediate) opcode = 0x69;
+        else if (mode == AM_Zeropage) opcode = 0x65;
+        else if (mode == AM_Zeropage_X) opcode = 0x75;
+        else if (mode == AM_Absolute) opcode = 0x6D;
+        else if (mode == AM_Absolute_X) opcode = 0x7D;
+        else if (mode == AM_Absolute_Y) opcode = 0x79;
+        else if (mode == AM_Indirect_X) opcode = 0x61;
+        else if (mode == AM_Indirect_Y) opcode = 0x71;
+        else error = true;
       } break;
+      case I_AND: {
+        if (mode == AM_Immediate) opcode = 0x29;
+        else if (mode == AM_Zeropage) opcode = 0x25;
+        else if (mode == AM_Zeropage_X) opcode = 0x35;
+        else if (mode == AM_Absolute) opcode = 0x2D;
+        else if (mode == AM_Absolute_X) opcode = 0x3D;
+        else if (mode == AM_Absolute_Y) opcode = 0x39;
+        else if (mode == AM_Indirect_X) opcode = 0x21;
+        else if (mode == AM_Indirect_Y) opcode = 0x31;
+        else error = true;
+      } break;
+      case I_ASL: {
+        if (mode == AM_Accumulator) opcode = 0x0A;
+        else if (mode == AM_Zeropage) opcode = 0x06;
+        else if (mode == AM_Zeropage_X) opcode = 0x16;
+        else if (mode == AM_Absolute) opcode = 0x0E;
+        else if (mode == AM_Absolute_X) opcode = 0x1E;
+        else error = true;
+      } break;
+      case I_BCC: {
+        if (mode == AM_Relative) opcode = 0x90;
+        else error = true;
+      } break;
+      case I_BCS: {
+        if (mode == AM_Relative) opcode = 0xB0;
+        else error = true;
+      } break;
+      case I_LDA: {
+        if (mode == AM_Immediate) opcode = 0xA9;
+        else if (mode == AM_Zeropage) opcode = 0xA5;
+        else if (mode == AM_Zeropage_X) opcode = 0xB5;
+        else if (mode == AM_Absolute) opcode = 0xAD;
+        else if (mode == AM_Absolute_X) opcode = 0xBD;
+        else if (mode == AM_Absolute_Y) opcode = 0xB9;
+        else if (mode == AM_Indirect_X) opcode = 0xA1;
+        else if (mode == AM_Indirect_Y) opcode = 0xB1;
+        else error = true;
+      } break;
+      case I_STA: {
+        if (mode == AM_Zeropage) opcode = 0x85;
+        else if (mode == AM_Zeropage_X) opcode = 0x95;
+        else if (mode == AM_Absolute) opcode = 0x8D;
+        else if (mode == AM_Absolute_X) opcode = 0x9D;
+        else if (mode == AM_Absolute_Y) opcode = 0x99;
+        else if (mode == AM_Indirect_X) opcode = 0x81;
+        else if (mode == AM_Indirect_Y) opcode = 0x91;
+        else error = true;
+      } break;
+      case I_NOP: {
+        if (mode == AM_Implied) opcode = 0xEA;
+        else error = true;
+      } break;
+      case I_JMP: {
+        if (mode == AM_Absolute) opcode = 0x4C;
+        else if (mode == AM_Indirect) opcode = 0x6C;
+        else error = true;
+      } break;
+    }
+
+    int bytes = 0;
+    if (mode == AM_Immediate) bytes = 2;
+    else if (mode == AM_Zeropage) bytes = 2;
+    else if (mode == AM_Zeropage_X) bytes = 2;
+    else if (mode == AM_Absolute) bytes = 3;
+    else if (mode == AM_Absolute_X) bytes = 3;
+    else if (mode == AM_Absolute_Y) bytes = 3;
+    else if (mode == AM_Indirect_X) bytes = 2;
+    else if (mode == AM_Indirect_Y) bytes = 2;
+    else if (mode == AM_Implied) bytes = 1;
+    else if (mode == AM_Relative) bytes = 2;
+    else if (mode == AM_Accumulator) bytes = 1;
+    else if (mode == AM_Indirect) bytes = 3;
+    else error = true;
+
+    if (error) {
+      instruction->mnemonic->SyntaxError("Incorrect addressing mode");
     }
   }
 
