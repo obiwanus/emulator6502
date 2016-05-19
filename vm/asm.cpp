@@ -576,7 +576,7 @@ static int LoadProgram(char *filename, int memory_address) {
           instruction->type = I_BCS;
           instruction->modes = AMF_RELATIVE;
         } else if (token->Equals("LDA")) {
-          instruction->type = I_STA;
+          instruction->type = I_LDA;
           instruction->modes = AMF_MOST_COMMON;
         } else if (token->Equals("STA")) {
           instruction->type = I_STA;
@@ -601,6 +601,7 @@ static int LoadProgram(char *filename, int memory_address) {
 
         if (modes & AMF_IMPLIED) {
           // No operand required
+          instruction->mode = AM_Implied;
           break;
         }
 
@@ -642,8 +643,7 @@ static int LoadProgram(char *filename, int memory_address) {
           break;
         }
 
-        if ((modes &
-             (AMF_INDIRECT_X | AMF_INDIRECT_Y | AMF_INDIRECT)) &&
+        if ((modes & (AMF_INDIRECT_X | AMF_INDIRECT_Y | AMF_INDIRECT)) &&
             token->type == Token_OpenParen) {
           token = assembler.NextToken();
           if (token->type == Token_Identifier) {
@@ -657,8 +657,7 @@ static int LoadProgram(char *filename, int memory_address) {
             instruction->mode = AM_Indirect;
           } else {
             token = assembler.NextToken();
-            if (token->type == Token_CloseParen &&
-                (modes & AMF_INDIRECT_Y)) {
+            if (token->type == Token_CloseParen && (modes & AMF_INDIRECT_Y)) {
               assembler.RequireToken(Token_Comma);
               token = assembler.NextToken();
               if (token->Equals("y")) {
@@ -666,8 +665,7 @@ static int LoadProgram(char *filename, int memory_address) {
               } else {
                 token->SyntaxError("Y expected, got");
               }
-            } else if (token->type == Token_Comma &&
-                       (modes & AMF_INDIRECT_X)) {
+            } else if (token->type == Token_Comma && (modes & AMF_INDIRECT_X)) {
               token = assembler.NextToken();
               if (token->Equals("X")) {
                 instruction->mode = AM_Indirect_X;
@@ -710,6 +708,8 @@ static int LoadProgram(char *filename, int memory_address) {
   codegen.at_memory = (u8 *)gMachineMemory + memory_address;
   codegen.at_instruction = assembler.instructions;
 
+  u8 *memory = (u8 *)gMachineMemory + memory_address;  // for debugging
+
   for (int i = 0; i < assembler.num_instructions; i++) {
     instruction = assembler.instructions + i;
 
@@ -741,11 +741,13 @@ static int LoadProgram(char *filename, int memory_address) {
       instruction->mode = AM_Zeropage;
     }
     if (instruction->mode == AMF_ABSOLUTE_X &&
-        (instruction->modes & AMF_ZERO_PAGE_X) && instruction->operand <= 0xFF) {
+        (instruction->modes & AMF_ZERO_PAGE_X) &&
+        instruction->operand <= 0xFF) {
       instruction->mode = AM_Zeropage_X;
     }
     if (instruction->mode == AMF_ABSOLUTE_Y &&
-        (instruction->modes & AMF_ZERO_PAGE_Y) && instruction->operand <= 0xFF) {
+        (instruction->modes & AMF_ZERO_PAGE_Y) &&
+        instruction->operand <= 0xFF) {
       instruction->mode = AM_Zeropage_Y;
     }
 
@@ -755,92 +757,176 @@ static int LoadProgram(char *filename, int memory_address) {
 
     switch (instruction->type) {
       case I_ADC: {
-        if (mode == AM_Immediate) opcode = 0x69;
-        else if (mode == AM_Zeropage) opcode = 0x65;
-        else if (mode == AM_Zeropage_X) opcode = 0x75;
-        else if (mode == AM_Absolute) opcode = 0x6D;
-        else if (mode == AM_Absolute_X) opcode = 0x7D;
-        else if (mode == AM_Absolute_Y) opcode = 0x79;
-        else if (mode == AM_Indirect_X) opcode = 0x61;
-        else if (mode == AM_Indirect_Y) opcode = 0x71;
-        else error = true;
+        if (mode == AM_Immediate)
+          opcode = 0x69;
+        else if (mode == AM_Zeropage)
+          opcode = 0x65;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x75;
+        else if (mode == AM_Absolute)
+          opcode = 0x6D;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x7D;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0x79;
+        else if (mode == AM_Indirect_X)
+          opcode = 0x61;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0x71;
+        else
+          error = true;
       } break;
       case I_AND: {
-        if (mode == AM_Immediate) opcode = 0x29;
-        else if (mode == AM_Zeropage) opcode = 0x25;
-        else if (mode == AM_Zeropage_X) opcode = 0x35;
-        else if (mode == AM_Absolute) opcode = 0x2D;
-        else if (mode == AM_Absolute_X) opcode = 0x3D;
-        else if (mode == AM_Absolute_Y) opcode = 0x39;
-        else if (mode == AM_Indirect_X) opcode = 0x21;
-        else if (mode == AM_Indirect_Y) opcode = 0x31;
-        else error = true;
+        if (mode == AM_Immediate)
+          opcode = 0x29;
+        else if (mode == AM_Zeropage)
+          opcode = 0x25;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x35;
+        else if (mode == AM_Absolute)
+          opcode = 0x2D;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x3D;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0x39;
+        else if (mode == AM_Indirect_X)
+          opcode = 0x21;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0x31;
+        else
+          error = true;
       } break;
       case I_ASL: {
-        if (mode == AM_Accumulator) opcode = 0x0A;
-        else if (mode == AM_Zeropage) opcode = 0x06;
-        else if (mode == AM_Zeropage_X) opcode = 0x16;
-        else if (mode == AM_Absolute) opcode = 0x0E;
-        else if (mode == AM_Absolute_X) opcode = 0x1E;
-        else error = true;
+        if (mode == AM_Accumulator)
+          opcode = 0x0A;
+        else if (mode == AM_Zeropage)
+          opcode = 0x06;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x16;
+        else if (mode == AM_Absolute)
+          opcode = 0x0E;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x1E;
+        else
+          error = true;
       } break;
       case I_BCC: {
-        if (mode == AM_Relative) opcode = 0x90;
-        else error = true;
+        if (mode == AM_Relative)
+          opcode = 0x90;
+        else
+          error = true;
       } break;
       case I_BCS: {
-        if (mode == AM_Relative) opcode = 0xB0;
-        else error = true;
+        if (mode == AM_Relative)
+          opcode = 0xB0;
+        else
+          error = true;
       } break;
       case I_LDA: {
-        if (mode == AM_Immediate) opcode = 0xA9;
-        else if (mode == AM_Zeropage) opcode = 0xA5;
-        else if (mode == AM_Zeropage_X) opcode = 0xB5;
-        else if (mode == AM_Absolute) opcode = 0xAD;
-        else if (mode == AM_Absolute_X) opcode = 0xBD;
-        else if (mode == AM_Absolute_Y) opcode = 0xB9;
-        else if (mode == AM_Indirect_X) opcode = 0xA1;
-        else if (mode == AM_Indirect_Y) opcode = 0xB1;
-        else error = true;
+        if (mode == AM_Immediate)
+          opcode = 0xA9;
+        else if (mode == AM_Zeropage)
+          opcode = 0xA5;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xB5;
+        else if (mode == AM_Absolute)
+          opcode = 0xAD;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xBD;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0xB9;
+        else if (mode == AM_Indirect_X)
+          opcode = 0xA1;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0xB1;
+        else
+          error = true;
       } break;
       case I_STA: {
-        if (mode == AM_Zeropage) opcode = 0x85;
-        else if (mode == AM_Zeropage_X) opcode = 0x95;
-        else if (mode == AM_Absolute) opcode = 0x8D;
-        else if (mode == AM_Absolute_X) opcode = 0x9D;
-        else if (mode == AM_Absolute_Y) opcode = 0x99;
-        else if (mode == AM_Indirect_X) opcode = 0x81;
-        else if (mode == AM_Indirect_Y) opcode = 0x91;
-        else error = true;
+        if (mode == AM_Zeropage)
+          opcode = 0x85;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x95;
+        else if (mode == AM_Absolute)
+          opcode = 0x8D;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x9D;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0x99;
+        else if (mode == AM_Indirect_X)
+          opcode = 0x81;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0x91;
+        else
+          error = true;
       } break;
       case I_NOP: {
-        if (mode == AM_Implied) opcode = 0xEA;
-        else error = true;
+        if (mode == AM_Implied)
+          opcode = 0xEA;
+        else
+          error = true;
       } break;
       case I_JMP: {
-        if (mode == AM_Absolute) opcode = 0x4C;
-        else if (mode == AM_Indirect) opcode = 0x6C;
-        else error = true;
+        if (mode == AM_Absolute)
+          opcode = 0x4C;
+        else if (mode == AM_Indirect)
+          opcode = 0x6C;
+        else
+          error = true;
       } break;
     }
 
     int bytes = 0;
-    if (mode == AM_Immediate) bytes = 2;
-    else if (mode == AM_Zeropage) bytes = 2;
-    else if (mode == AM_Zeropage_X) bytes = 2;
-    else if (mode == AM_Absolute) bytes = 3;
-    else if (mode == AM_Absolute_X) bytes = 3;
-    else if (mode == AM_Absolute_Y) bytes = 3;
-    else if (mode == AM_Indirect_X) bytes = 2;
-    else if (mode == AM_Indirect_Y) bytes = 2;
-    else if (mode == AM_Implied) bytes = 1;
-    else if (mode == AM_Relative) bytes = 2;
-    else if (mode == AM_Accumulator) bytes = 1;
-    else if (mode == AM_Indirect) bytes = 3;
-    else error = true;
+    if (mode == AM_Immediate)
+      bytes = 2;
+    else if (mode == AM_Zeropage)
+      bytes = 2;
+    else if (mode == AM_Zeropage_X)
+      bytes = 2;
+    else if (mode == AM_Absolute)
+      bytes = 3;
+    else if (mode == AM_Absolute_X)
+      bytes = 3;
+    else if (mode == AM_Absolute_Y)
+      bytes = 3;
+    else if (mode == AM_Indirect_X)
+      bytes = 2;
+    else if (mode == AM_Indirect_Y)
+      bytes = 2;
+    else if (mode == AM_Implied)
+      bytes = 1;
+    else if (mode == AM_Relative)
+      bytes = 2;
+    else if (mode == AM_Accumulator)
+      bytes = 1;
+    else if (mode == AM_Indirect)
+      bytes = 3;
+    else
+      error = true;
 
     if (error) {
       instruction->mnemonic->SyntaxError("Incorrect addressing mode");
+    }
+
+    if ((bytes == 2 && instruction->operand > 0xFF) ||
+        (bytes == 3 && instruction->operand > 0xFFFF)) {
+      instruction->mnemonic->SyntaxError(
+          "Operand is too large for this addressing mode");
+    }
+
+    // Finally, write in memory
+    *codegen.at_memory = opcode;
+    codegen.at_memory++;
+    if (bytes == 2) {
+      *codegen.at_memory = (u8)instruction->operand;
+      codegen.at_memory++;
+    } else if (bytes == 3) {
+      u8 lsb = (u8)instruction->operand;
+      u8 msb = (u8)(instruction->operand >> 8);
+      *codegen.at_memory = lsb;
+      codegen.at_memory++;
+      *codegen.at_memory = msb;
+      codegen.at_memory++;
     }
   }
 
