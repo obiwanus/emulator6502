@@ -596,181 +596,184 @@ static int LoadProgram(char *filename, u16 memory_address) {
       case Token_Identifier: {
         instruction = assembler.NewInstruction();
         instruction->mnemonic = token;
+        u32 modes = AMF_NONE;
+        InstructionType type = I_Unknown;
 
         // Parse mnemonic
         if (token->Equals("ADC")) {
-          instruction->type = I_ADC;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_ADC;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("AND")) {
-          instruction->type = I_AND;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_AND;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("ASL")) {
-          instruction->type = I_ASL;
-          instruction->modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_ASL;
+          modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("BCC")) {
-          instruction->type = I_BCC;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BCC;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BCS")) {
-          instruction->type = I_BCS;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BCS;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BEQ")) {
-          instruction->type = I_BEQ;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BEQ;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BIT")) {
-          instruction->type = I_BIT;
-          instruction->modes = AMF_ABSOLUTE_Z;
+          type = I_BIT;
+          modes = AMF_ABSOLUTE_Z;
         } else if (token->Equals("BMI")) {
-          instruction->type = I_BMI;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BMI;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BNE")) {
-          instruction->type = I_BNE;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BNE;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BPL")) {
-          instruction->type = I_BPL;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BPL;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BRK")) {
-          instruction->type = I_BRK;
-          instruction->modes = AMF_IMPLIED;
+          type = I_BRK;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("BVC")) {
-          instruction->type = I_BVC;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BVC;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("BVS")) {
-          instruction->type = I_BVS;
-          instruction->modes = AMF_RELATIVE;
+          type = I_BVS;
+          modes = AMF_RELATIVE;
         } else if (token->Equals("CLC")) {
-          instruction->type = I_CLC;
-          instruction->modes = AMF_IMPLIED;
+          type = I_CLC;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("CLD")) {
-          instruction->type = I_CLD;
-          instruction->modes = AMF_IMPLIED;
+          type = I_CLD;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("CLI")) {
-          instruction->type = I_CLI;
-          instruction->modes = AMF_IMPLIED;
+          type = I_CLI;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("CLV")) {
-          instruction->type = I_CLV;
-          instruction->modes = AMF_IMPLIED;
+          type = I_CLV;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("CMP")) {
-          instruction->type = I_CMP;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_CMP;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("CPX")) {
-          instruction->type = I_CPX;
-          instruction->modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z;
+          type = I_CPX;
+          modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z;
         } else if (token->Equals("CPY")) {
-          instruction->type = I_CPY;
-          instruction->modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z;
+          type = I_CPY;
+          modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z;
         } else if (token->Equals("DEC")) {
-          instruction->type = I_DEC;
-          instruction->modes = AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_DEC;
+          modes = AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("DEX")) {
-          instruction->type = I_DEX;
-          instruction->modes = AMF_IMPLIED;
+          type = I_DEX;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("DEY")) {
-          instruction->type = I_DEY;
-          instruction->modes = AMF_IMPLIED;
+          type = I_DEY;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("EOR")) {
-          instruction->type = I_EOR;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_EOR;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("INC")) {
-          instruction->type = I_INC;
-          instruction->modes = AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_INC;
+          modes = AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("INX")) {
-          instruction->type = I_INX;
-          instruction->modes = AMF_IMPLIED;
+          type = I_INX;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("INY")) {
-          instruction->type = I_INY;
-          instruction->modes = AMF_IMPLIED;
+          type = I_INY;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("JMP")) {
-          instruction->type = I_JMP;
-          instruction->modes = AMF_ABSOLUTE | AMF_INDIRECT;
+          type = I_JMP;
+          modes = AMF_ABSOLUTE | AMF_INDIRECT;
         } else if (token->Equals("JSR")) {
-          instruction->type = I_JSR;
-          instruction->modes = AMF_ABSOLUTE;
+          type = I_JSR;
+          modes = AMF_ABSOLUTE;
         } else if (token->Equals("LDA")) {
-          instruction->type = I_LDA;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_LDA;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("LDX")) {
-          instruction->type = I_LDX;
-          instruction->modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZY;
+          type = I_LDX;
+          modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZY;
         } else if (token->Equals("LDY")) {
-          instruction->type = I_LDY;
-          instruction->modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_LDY;
+          modes = AMF_IMMEDIATE | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("LSR")) {
-          instruction->type = I_LSR;
-          instruction->modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_LSR;
+          modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("NOP")) {
-          instruction->type = I_NOP;
-          instruction->modes = AMF_IMPLIED;
+          type = I_NOP;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("ORA")) {
-          instruction->type = I_ORA;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_ORA;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("PHA")) {
-          instruction->type = I_PHA;
-          instruction->modes = AMF_IMPLIED;
+          type = I_PHA;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("PHP")) {
-          instruction->type = I_PHP;
-          instruction->modes = AMF_IMPLIED;
+          type = I_PHP;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("PLA")) {
-          instruction->type = I_PLA;
-          instruction->modes = AMF_IMPLIED;
+          type = I_PLA;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("PLP")) {
-          instruction->type = I_PLP;
-          instruction->modes = AMF_IMPLIED;
+          type = I_PLP;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("ROL")) {
-          instruction->type = I_ROL;
-          instruction->modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_ROL;
+          modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("ROR")) {
-          instruction->type = I_ROR;
-          instruction->modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
+          type = I_ROR;
+          modes = AMF_ACCUMULATOR | AMF_ABSOLUTE_Z | AMF_ABSOLUTE_ZX;
         } else if (token->Equals("RTI")) {
-          instruction->type = I_RTI;
-          instruction->modes = AMF_IMPLIED;
+          type = I_RTI;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("RTS")) {
-          instruction->type = I_RTS;
-          instruction->modes = AMF_IMPLIED;
+          type = I_RTS;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("SBC")) {
-          instruction->type = I_SBC;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_SBC;
+          modes = AMF_MOST_COMMON;
         } else if (token->Equals("SEC")) {
-          instruction->type = I_SEC;
-          instruction->modes = AMF_IMPLIED;
+          type = I_SEC;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("SED")) {
-          instruction->type = I_SED;
-          instruction->modes = AMF_IMPLIED;
+          type = I_SED;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("SEI")) {
-          instruction->type = I_SEI;
-          instruction->modes = AMF_IMPLIED;
+          type = I_SEI;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("STA")) {
-          instruction->type = I_STA;
-          instruction->modes = AMF_MOST_COMMON & ~AMF_IMMEDIATE;
+          type = I_STA;
+          modes = AMF_MOST_COMMON & ~AMF_IMMEDIATE;
         } else if (token->Equals("STX")) {
-          instruction->type = I_STX;
-          instruction->modes = AMF_ABSOLUTE_Z | AMF_ZERO_PAGE_Y;
+          type = I_STX;
+          modes = AMF_ABSOLUTE_Z | AMF_ZERO_PAGE_Y;
         } else if (token->Equals("STY")) {
-          instruction->type = I_STY;
-          instruction->modes = AMF_ABSOLUTE_Z | AMF_ZERO_PAGE_X;
+          type = I_STY;
+          modes = AMF_ABSOLUTE_Z | AMF_ZERO_PAGE_X;
         } else if (token->Equals("TAX")) {
-          instruction->type = I_TAX;
-          instruction->modes = AMF_IMPLIED;
+          type = I_TAX;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("TAY")) {
-          instruction->type = I_TAY;
-          instruction->modes = AMF_IMPLIED;
+          type = I_TAY;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("TSX")) {
-          instruction->type = I_TSX;
-          instruction->modes = AMF_IMPLIED;
+          type = I_TSX;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("TXA")) {
-          instruction->type = I_TXA;
-          instruction->modes = AMF_IMPLIED;
+          type = I_TXA;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("TXS")) {
-          instruction->type = I_TXS;
-          instruction->modes = AMF_IMPLIED;
+          type = I_TXS;
+          modes = AMF_IMPLIED;
         } else if (token->Equals("TYA")) {
-          instruction->type = I_TYA;
-          instruction->modes = AMF_MOST_COMMON;
+          type = I_TYA;
+          modes = AMF_MOST_COMMON;
         } else {
           assembler.SyntaxError("Unknown command");
         }
 
-        u32 modes = instruction->modes;
+        instruction->type = type;
+        instruction->modes = modes;
 
         if (modes & AMF_IMPLIED) {
           // No operand required
