@@ -432,25 +432,6 @@ inline bool IsHex(char c) {
   return IsDecimal(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F');
 }
 
-void EatWhiteSpace(Tokenizer *tokenizer) {
-  for (;;) {
-    char c = tokenizer->at[0];
-    if (IsWhitespace(c)) {
-      if (c == '\n') {
-        tokenizer->line_num++;
-      }
-      tokenizer->at++;
-    } else if (c == '/' && tokenizer->at[1] == '/') {
-      tokenizer->at += 2;
-      while (!IsEndOfLine(*tokenizer->at)) {
-        tokenizer->at++;
-      }
-    } else {
-      break;
-    }
-  }
-}
-
 int BytesForAddressingMode(AddressingMode mode) {
   int bytes = 0;
 
@@ -482,87 +463,103 @@ int BytesForAddressingMode(AddressingMode mode) {
   return bytes;
 }
 
-Token *GetToken(Tokenizer *tokenizer) {
-  EatWhiteSpace(tokenizer);
-
-  Token *token = tokenizer->NewToken();
-  token->text = tokenizer->at;
-  token->length = 0;
-  token->line_num = tokenizer->line_num;  // for error reporting
-
-  char c = *tokenizer->at;
-  if (IsAlpha(c)) {
-    while (!IsWhitespace(c) && c != ':' && c != '\0' && c != '(' && c != ')' &&
-           c != ',') {
-      c = *++tokenizer->at;
-      token->length++;
-    }
-    if (c == ':') {
-      token->type = Token_Label;
-      tokenizer->at++;
-    } else {
-      token->type = Token_Identifier;
-    }
-  } else if (c == '#') {
-    token->type = Token_Hash;
-    token->length = 1;
-    tokenizer->at++;
-  } else if (c == '(') {
-    token->type = Token_OpenParen;
-    token->length = 1;
-    tokenizer->at++;
-  } else if (c == ')') {
-    token->type = Token_CloseParen;
-    token->length = 1;
-    tokenizer->at++;
-  } else if (c == ',') {
-    token->type = Token_Comma;
-    token->length = 1;
-    tokenizer->at++;
-  } else if (IsDecimal(c)) {
-    token->type = Token_DecNumber;
-    while (IsDecimal(*tokenizer->at)) {
-      tokenizer->at++;
-      token->length++;
-    }
-  } else if (c == '$') {
-    token->type = Token_HexNumber;
-    tokenizer->at++;
-    token->text++;  // skip the $
-    while (IsHex(*tokenizer->at)) {
-      tokenizer->at++;
-      token->length++;
-    }
-    if (token->length == 0) {
-      token->type = Token_SyntaxError;
-      sprintf(tokenizer->error_msg, "Number expected after $");
-    }
-  } else if (c == '\0') {
-    token->type = Token_EndOfStream;
-  } else {
-    token->type = Token_SyntaxError;
-    while (!IsWhitespace(c)) {
-      c = *++tokenizer->at;
-      token->length++;
-    }
-    sprintf(tokenizer->error_msg, "Unknown token '%.*s'", token->length,
-            token->text);
-  }
-
-  return token;
-}
-
 static int LoadProgram(char *filename, u16 memory_address) {
   char *file_contents = ReadFileIntoString(filename);
   print("Assembling %s ...\n", filename);
 
+  // ****************************************************************
+  // Tokenizing
+  // ****************************************************************
   Tokenizer tokenizer = {};
   tokenizer.at = file_contents;
   tokenizer.line_num = 1;
 
   bool tokenizing = true;
   while (tokenizing) {
-    Token *token = GetToken(&tokenizer);
+    // Eat white space
+    for (;;) {
+      char c = tokenizer.at[0];
+      if (IsWhitespace(c)) {
+        if (c == '\n') {
+          tokenizer.line_num++;
+        }
+        tokenizer.at++;
+      } else if (c == '/' && tokenizer.at[1] == '/') {
+        tokenizer.at += 2;
+        while (!IsEndOfLine(*tokenizer.at)) {
+          tokenizer.at++;
+        }
+      } else {
+        break;
+      }
+    }
+
+    // Get token
+    Token *token = tokenizer.NewToken();
+    token->text = tokenizer.at;
+    token->length = 0;
+    token->line_num = tokenizer.line_num;  // for error reporting
+
+    char c = *tokenizer.at;
+    if (IsAlpha(c)) {
+      while (!IsWhitespace(c) && c != ':' && c != '\0' && c != '(' && c != ')' &&
+             c != ',') {
+        c = *++tokenizer.at;
+        token->length++;
+      }
+      if (c == ':') {
+        token->type = Token_Label;
+        tokenizer.at++;
+      } else {
+        token->type = Token_Identifier;
+      }
+    } else if (c == '#') {
+      token->type = Token_Hash;
+      token->length = 1;
+      tokenizer.at++;
+    } else if (c == '(') {
+      token->type = Token_OpenParen;
+      token->length = 1;
+      tokenizer.at++;
+    } else if (c == ')') {
+      token->type = Token_CloseParen;
+      token->length = 1;
+      tokenizer.at++;
+    } else if (c == ',') {
+      token->type = Token_Comma;
+      token->length = 1;
+      tokenizer.at++;
+    } else if (IsDecimal(c)) {
+      token->type = Token_DecNumber;
+      while (IsDecimal(*tokenizer.at)) {
+        tokenizer.at++;
+        token->length++;
+      }
+    } else if (c == '$') {
+      token->type = Token_HexNumber;
+      tokenizer.at++;
+      token->text++;  // skip the $
+      while (IsHex(*tokenizer.at)) {
+        tokenizer.at++;
+        token->length++;
+      }
+      if (token->length == 0) {
+        token->type = Token_SyntaxError;
+        sprintf(tokenizer.error_msg, "Number expected after $");
+      }
+    } else if (c == '\0') {
+      token->type = Token_EndOfStream;
+    } else {
+      token->type = Token_SyntaxError;
+      while (!IsWhitespace(c)) {
+        c = *++tokenizer.at;
+        token->length++;
+      }
+      sprintf(tokenizer.error_msg, "Unknown token '%.*s'", token->length,
+              token->text);
+    }
+    // End get token
+
     if (token->type == Token_EndOfStream) {
       tokenizing = false;
     } else if (token->type == Token_SyntaxError) {
@@ -571,6 +568,10 @@ static int LoadProgram(char *filename, u16 memory_address) {
       exit(1);
     }
   }
+
+  // ****************************************************************
+  // Parsing
+  // ****************************************************************
 
   Assembler assembler = {};
   assembler.at_token = tokenizer.tokens;
@@ -879,6 +880,10 @@ static int LoadProgram(char *filename, u16 memory_address) {
     }
     token = assembler.NextToken();
   }
+
+  // ****************************************************************
+  // Code generation
+  // ****************************************************************
 
   CodeGenerator codegen = {};
   codegen.at_memory = (u8 *)gMachineMemory + memory_address;
