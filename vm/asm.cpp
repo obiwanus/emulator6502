@@ -67,7 +67,8 @@ struct Tokenizer {
 #define AMF_ACCUMULATOR 0x1000
 
 enum AddressingMode {
-  AM_Immediate = 1,
+  AM_Unknown = 0,
+  AM_Immediate,
   AM_Absolute,
   AM_Relative,
   AM_Absolute_X,
@@ -83,7 +84,8 @@ enum AddressingMode {
 };
 
 enum InstructionType {
-  I_NOP = 0,
+  I_Unknown = 0,
+  I_NOP,
   I_ADC,
   I_AND,
   I_ASL,
@@ -444,6 +446,37 @@ void EatWhiteSpace(Tokenizer *tokenizer) {
   }
 }
 
+int BytesForAddressingMode(AddressingMode mode) {
+  int bytes = 0;
+
+  if (mode == AM_Immediate)
+    bytes = 2;
+  else if (mode == AM_Zeropage)
+    bytes = 2;
+  else if (mode == AM_Zeropage_X)
+    bytes = 2;
+  else if (mode == AM_Absolute)
+    bytes = 3;
+  else if (mode == AM_Absolute_X)
+    bytes = 3;
+  else if (mode == AM_Absolute_Y)
+    bytes = 3;
+  else if (mode == AM_Indirect_X)
+    bytes = 2;
+  else if (mode == AM_Indirect_Y)
+    bytes = 2;
+  else if (mode == AM_Implied)
+    bytes = 1;
+  else if (mode == AM_Relative)
+    bytes = 2;
+  else if (mode == AM_Accumulator)
+    bytes = 1;
+  else if (mode == AM_Indirect)
+    bytes = 3;
+
+  return bytes;
+}
+
 Token *GetToken(Tokenizer *tokenizer) {
   EatWhiteSpace(tokenizer);
 
@@ -514,7 +547,7 @@ Token *GetToken(Tokenizer *tokenizer) {
   return token;
 }
 
-static int LoadProgram(char *filename, int memory_address) {
+static int LoadProgram(char *filename, u16 memory_address) {
   char *file_contents = ReadFileIntoString(filename);
   print("Assembling %s ...\n", filename);
 
@@ -876,35 +909,9 @@ static int LoadProgram(char *filename, int memory_address) {
       } break;
     }
 
-    int bytes = 0;
-    if (mode == AM_Immediate)
-      bytes = 2;
-    else if (mode == AM_Zeropage)
-      bytes = 2;
-    else if (mode == AM_Zeropage_X)
-      bytes = 2;
-    else if (mode == AM_Absolute)
-      bytes = 3;
-    else if (mode == AM_Absolute_X)
-      bytes = 3;
-    else if (mode == AM_Absolute_Y)
-      bytes = 3;
-    else if (mode == AM_Indirect_X)
-      bytes = 2;
-    else if (mode == AM_Indirect_Y)
-      bytes = 2;
-    else if (mode == AM_Implied)
-      bytes = 1;
-    else if (mode == AM_Relative)
-      bytes = 2;
-    else if (mode == AM_Accumulator)
-      bytes = 1;
-    else if (mode == AM_Indirect)
-      bytes = 3;
-    else
-      error = true;
+    int bytes = BytesForAddressingMode(mode);
 
-    if (error) {
+    if (error || bytes == 0) {
       instruction->mnemonic->SyntaxError("Incorrect addressing mode");
     }
 

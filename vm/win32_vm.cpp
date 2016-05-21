@@ -58,8 +58,10 @@ Win32WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 DWORD WINAPI MachineThread(LPVOID lpParam) {
+  CPU cpu = CPU();
+
   while (gRunning) {
-    MachineTick();
+    cpu.Tick();
     Sleep(1);
   }
   return 0;
@@ -109,8 +111,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       GlobalBitmapInfo.bmiHeader.biBitCount = 32;
       GlobalBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-      // Load the program at $D400
-      LoadProgram("test/dumb.s", 0xD400);
+      // Load the program
+      LoadProgram("test/dumb.s", kPC_start);
 
       // Run the machine
       HANDLE MainMachineThread = CreateThread(0, 0, MachineThread, 0, 0, 0);
