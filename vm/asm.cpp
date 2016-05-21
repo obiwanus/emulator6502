@@ -502,8 +502,8 @@ static int LoadProgram(char *filename, u16 memory_address) {
 
     char c = *tokenizer.at;
     if (IsAlpha(c)) {
-      while (!IsWhitespace(c) && c != ':' && c != '\0' && c != '(' && c != ')' &&
-             c != ',') {
+      while (!IsWhitespace(c) && c != ':' && c != '\0' && c != '(' &&
+             c != ')' && c != ',') {
         c = *++tokenizer.at;
         token->length++;
       }
@@ -932,6 +932,7 @@ static int LoadProgram(char *filename, u16 memory_address) {
       instruction->mode = AM_Zeropage_Y;
     }
 
+    // Get opcode ************************************************
     u8 opcode = 0;
     AddressingMode mode = instruction->mode;
     InstructionType type = instruction->type;
@@ -992,15 +993,63 @@ static int LoadProgram(char *filename, u16 memory_address) {
         else
           error = true;
       } break;
-      case I_BCC: {
-        if (mode == AM_Relative)
-          opcode = 0x90;
+      case I_BIT: {
+        if (mode == AM_Absolute)
+          opcode = 0x2C;
+        else if (mode == AM_Zeropage)
+          opcode = 0x24;
         else
           error = true;
       } break;
-      case I_BCS: {
-        if (mode == AM_Relative)
-          opcode = 0xB0;
+      case I_CMP: {
+        if (mode == AM_Immediate)
+          opcode = 0xC9;
+        else if (mode == AM_Zeropage)
+          opcode = 0xC5;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xD5;
+        else if (mode == AM_Absolute)
+          opcode = 0xCD;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xDD;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0xD9;
+        else if (mode == AM_Indirect_X)
+          opcode = 0xC1;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0xD1;
+        else
+          error = true;
+      } break;
+      case I_CPX: {
+        if (mode == AM_Immediate)
+          opcode = 0xE0;
+        else if (mode == AM_Zeropage)
+          opcode = 0xE4;
+        else if (mode == AM_Absolute)
+          opcode = 0xEC;
+        else
+          error = true;
+      } break;
+      case I_CPY: {
+        if (mode == AM_Immediate)
+          opcode = 0xC0;
+        else if (mode == AM_Zeropage)
+          opcode = 0xC4;
+        else if (mode == AM_Absolute)
+          opcode = 0xCC;
+        else
+          error = true;
+      } break;
+      case I_DEC: {
+        if (mode == AM_Zeropage)
+          opcode = 0xC6;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xD6;
+        else if (mode == AM_Absolute)
+          opcode = 0xCE;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xDE;
         else
           error = true;
       } break;
@@ -1052,12 +1101,42 @@ static int LoadProgram(char *filename, u16 memory_address) {
       } break;
     }
 
-    // A separate block for the single byte instructions
+    // Single mode instructions below
     if (mode == AM_Implied) {
-      if (type == I_NOP)
-        opcode = 0xEA;
-      else if (type == I_INX)
-        opcode = 0xE8;
+      if (type == I_BRK)
+        opcode = 0x00;
+      if (type == I_CLC)
+        opcode = 0x18;
+      if (type == I_CLD)
+        opcode = 0xD8;
+      if (type == I_CLI)
+        opcode = 0x58;
+      if (type == I_CLV)
+        opcode = 0xB8;
+      if (type == I_DEX)
+        opcode = 0xCA;
+      if (type == I_DEY)
+        opcode = 0x88;
+      else
+        error = true;
+    }
+    if (mode == AM_Relative) {
+      if (type == I_BCC)
+        opcode = 0x90;
+      else if (type == I_BCS)
+        opcode = 0xB0;
+      else if (type == I_BEQ)
+        opcode = 0xF0;
+      else if (type == I_BMI)
+        opcode = 0x30;
+      else if (type == I_BNE)
+        opcode = 0xD0;
+      else if (type == I_BPL)
+        opcode = 0x10;
+      else if (type == I_BVC)
+        opcode = 0x50;
+      else if (type == I_BVS)
+        opcode = 0x70;
       else
         error = true;
     }
