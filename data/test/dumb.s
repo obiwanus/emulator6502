@@ -1,26 +1,16 @@
-    lda #01
-    sta $0200
-    lda #02
-    sta $0202
-    lda #03
-    sta $0204
-    lda #04
-    sta $0206
-    lda #05
-    sta $0208
-    lda #06
-    sta $020A
-    lda #07
-    sta $020C
 
-    // sta ($02,x)
-
-    // jmp $d400
-    // jmp ($d400)
-
-    // bmi end
-
-    // inx
+    ldx #0
+    lda #0
+draw:
+    sta $0200,x
+    adc #1
+    cmp #16
+    bcc noreset
+    lda #0
+noreset:
+    inx
+    cmx #53760
+    bcc draw
 
 end:
     nop

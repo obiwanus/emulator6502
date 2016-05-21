@@ -183,6 +183,19 @@ void CPU::Tick() {
     }
   }
 
+  if (mode == AM_Unknown) {
+    mode = AM_Implied;
+    switch (opcode) {
+      case 0xE8: {
+        type = I_INX;
+      } break;
+
+      default: {
+        mode = AM_Unknown;
+      } break;
+    }
+  }
+
   // Default
   if (mode == AM_Unknown) {
     type = I_NOP;
@@ -266,6 +279,9 @@ void CPU::Tick() {
     } break;
     case I_JMP: {
       this->PC = data;
+    } break;
+    case I_INX: {
+      this->X++;
     } break;
     case I_NOP: {
       // you lazy bastard!
