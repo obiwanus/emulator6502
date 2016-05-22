@@ -1053,6 +1053,52 @@ static int LoadProgram(char *filename, u16 memory_address) {
         else
           error = true;
       } break;
+      case I_EOR: {
+        if (mode == AM_Immediate)
+          opcode = 0x49;
+        else if (mode == AM_Zeropage)
+          opcode = 0x45;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x55;
+        else if (mode == AM_Absolute)
+          opcode = 0x4D;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x5D;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0x59;
+        else if (mode == AM_Indirect_X)
+          opcode = 0x41;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0x51;
+        else
+          error = true;
+      } break;
+      case I_INC: {
+        if (mode == AM_Zeropage)
+          opcode = 0xE6;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xF6;
+        else if (mode == AM_Absolute)
+          opcode = 0xEE;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xFE;
+        else
+          error = true;
+      } break;
+      case I_JMP: {
+        if (mode == AM_Absolute)
+          opcode = 0x4C;
+        else if (mode == AM_Indirect)
+          opcode = 0x6C;
+        else
+          error = true;
+      } break;
+      case I_JSR: {
+        if (mode == AM_Absolute)
+          opcode = 0x20;
+        else
+          error = true;
+      } break;
       case I_LDA: {
         if (mode == AM_Immediate)
           opcode = 0xA9;
@@ -1070,6 +1116,116 @@ static int LoadProgram(char *filename, u16 memory_address) {
           opcode = 0xA1;
         else if (mode == AM_Indirect_Y)
           opcode = 0xB1;
+        else
+          error = true;
+      } break;
+      case I_LDX: {
+        if (mode == AM_Immediate)
+          opcode = 0xA2;
+        else if (mode == AM_Zeropage)
+          opcode = 0xA6;
+        else if (mode == AM_Zeropage_Y)
+          opcode = 0xB6;
+        else if (mode == AM_Absolute)
+          opcode = 0xAE;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0xBE;
+        else
+          error = true;
+      } break;
+      case I_LDY: {
+        if (mode == AM_Immediate)
+          opcode = 0xA0;
+        else if (mode == AM_Zeropage)
+          opcode = 0xA4;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xB4;
+        else if (mode == AM_Absolute)
+          opcode = 0xAC;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xBC;
+        else
+          error = true;
+      } break;
+      case I_LSR: {
+        if (mode == AM_Accumulator)
+          opcode = 0x4A;
+        else if (mode == AM_Zeropage)
+          opcode = 0x46;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x56;
+        else if (mode == AM_Absolute)
+          opcode = 0x4E;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x5E;
+        else
+          error = true;
+      } break;
+      case I_ORA: {
+        if (mode == AM_Immediate)
+          opcode = 0x09;
+        else if (mode == AM_Zeropage)
+          opcode = 0x05;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x15;
+        else if (mode == AM_Absolute)
+          opcode = 0x0D;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x1D;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0x19;
+        else if (mode == AM_Indirect_X)
+          opcode = 0x01;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0x11;
+        else
+          error = true;
+      } break;
+      case I_ROL: {
+        if (mode == AM_Accumulator)
+          opcode = 0x2A;
+        else if (mode == AM_Zeropage)
+          opcode = 0x26;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x36;
+        else if (mode == AM_Absolute)
+          opcode = 0x2E;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x3E;
+        else
+          error = true;
+      } break;
+      case I_ROR: {
+        if (mode == AM_Accumulator)
+          opcode = 0x6A;
+        else if (mode == AM_Zeropage)
+          opcode = 0x66;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x76;
+        else if (mode == AM_Absolute)
+          opcode = 0x6E;
+        else if (mode == AM_Absolute_X)
+          opcode = 0x7E;
+        else
+          error = true;
+      } break;
+      case I_SBC: {
+        if (mode == AM_Immediate)
+          opcode = 0xE9;
+        else if (mode == AM_Zeropage)
+          opcode = 0xE5;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0xF5;
+        else if (mode == AM_Absolute)
+          opcode = 0xED;
+        else if (mode == AM_Absolute_X)
+          opcode = 0xFD;
+        else if (mode == AM_Absolute_Y)
+          opcode = 0xF9;
+        else if (mode == AM_Indirect_X)
+          opcode = 0xE1;
+        else if (mode == AM_Indirect_Y)
+          opcode = 0xF1;
         else
           error = true;
       } break;
@@ -1091,32 +1247,81 @@ static int LoadProgram(char *filename, u16 memory_address) {
         else
           error = true;
       } break;
-      case I_JMP: {
-        if (mode == AM_Absolute)
-          opcode = 0x4C;
-        else if (mode == AM_Indirect)
-          opcode = 0x6C;
+      case I_STX: {
+        if (mode == AM_Zeropage)
+          opcode = 0x86;
+        else if (mode == AM_Zeropage_Y)
+          opcode = 0x96;
+        else if (mode == AM_Absolute)
+          opcode = 0x8E;
         else
           error = true;
       } break;
+      case I_STY: {
+        if (mode == AM_Zeropage)
+          opcode = 0x84;
+        else if (mode == AM_Zeropage_X)
+          opcode = 0x94;
+        else if (mode == AM_Absolute)
+          opcode = 0x8C;
+        else
+          error = true;
+      } break;
+
     }
 
     // Single mode instructions below
     if (mode == AM_Implied) {
       if (type == I_BRK)
         opcode = 0x00;
-      if (type == I_CLC)
+      else if (type == I_CLC)
         opcode = 0x18;
-      if (type == I_CLD)
+      else if (type == I_CLD)
         opcode = 0xD8;
-      if (type == I_CLI)
+      else if (type == I_CLI)
         opcode = 0x58;
-      if (type == I_CLV)
+      else if (type == I_CLV)
         opcode = 0xB8;
-      if (type == I_DEX)
+      else if (type == I_DEX)
         opcode = 0xCA;
-      if (type == I_DEY)
+      else if (type == I_DEY)
         opcode = 0x88;
+      else if (type == I_INX)
+        opcode = 0xE8;
+      else if (type == I_INY)
+        opcode = 0xC8;
+      else if (type == I_NOP)
+        opcode = 0xEA;
+      else if (type == I_PHA)
+        opcode = 0x48;
+      else if (type == I_PHP)
+        opcode = 0x08;
+      else if (type == I_PLA)
+        opcode = 0x68;
+      else if (type == I_PLP)
+        opcode = 0x28;
+      else if (type == I_RTI)
+        opcode = 0x40;
+      else if (type == I_RTS)
+        opcode = 0x60;
+      else if (type == I_SEC)
+        opcode = 0x38;
+      else if (type == I_SED)
+        opcode = 0xF8;
+      else if (type == I_SEI)
+        opcode = 0x78;
+      else if (type == I_TAX)
+        opcode = 0xAA;
+      else if (type == I_TAY)
+        opcode = 0xA8;
+      else if (type == I_TSX)
+        opcode = 0xBA;
+      else if (type == I_TXA)
+        opcode = 0x8A;
+      else if (type == I_TXS)
+        opcode = 0x9A;
+      else if (type == I_TYA)
+        opcode = 0x98;
       else
         error = true;
     }
