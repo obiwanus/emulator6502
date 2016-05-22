@@ -15,6 +15,14 @@ global u8 *gVideoMemory;
 
 #define SCREEN_ZOOM 4
 
+#define FLAG_C 0x01
+#define FLAG_Z 0x02
+#define FLAG_I 0x04
+#define FLAG_D 0x08
+#define FLAG_B 0x10
+#define FLAG_V 0x40
+#define FLAG_S 0x80
+
 struct CPU {
   u8 A;
   u8 X;
@@ -27,7 +35,107 @@ struct CPU {
 
   CPU();
   void Tick();
+
+  inline bool GetC();
+  inline bool GetZ();
+  inline bool GetI();
+  inline bool GetD();
+  inline bool GetB();
+  inline bool GetV();
+  inline bool GetS();
+
+  inline void SetC(int);
+  inline void SetZ(int);
+  inline void SetI(int);
+  inline void SetD(int);
+  inline void SetB(int);
+  inline void SetV(int);
+  inline void SetS(int);
 };
+
+inline bool CPU::GetC() {
+  return (this->status & FLAG_C) > 0;
+}
+
+inline bool CPU::GetZ() {
+  return (this->status & FLAG_Z) > 0;
+}
+
+inline bool CPU::GetI() {
+  return (this->status & FLAG_I) > 0;
+}
+
+inline bool CPU::GetD() {
+  return (this->status & FLAG_D) > 0;
+}
+
+inline bool CPU::GetB() {
+  return (this->status & FLAG_B) > 0;
+}
+
+inline bool CPU::GetV() {
+  return (this->status & FLAG_V) > 0;
+}
+
+inline bool CPU::GetS() {
+  return (this->status & FLAG_S) > 0;
+}
+
+inline void CPU::SetC(int value) {
+  if (value) {
+    this->status |= FLAG_C;
+  } else {
+    this->status &= ~FLAG_C;
+  }
+}
+
+inline void CPU::SetZ(int value) {
+  if (value) {
+    this->status |= FLAG_Z;
+  } else {
+    this->status &= ~FLAG_Z;
+  }
+}
+
+inline void CPU::SetI(int value) {
+  if (value) {
+    this->status |= FLAG_I;
+  } else {
+    this->status &= ~FLAG_I;
+  }
+}
+
+inline void CPU::SetD(int value) {
+  if (value) {
+    this->status |= FLAG_D;
+  } else {
+    this->status &= ~FLAG_D;
+  }
+}
+
+inline void CPU::SetB(int value) {
+  if (value) {
+    this->status |= FLAG_B;
+  } else {
+    this->status &= ~FLAG_B;
+  }
+}
+
+inline void CPU::SetV(int value) {
+  if (value) {
+    this->status |= FLAG_V;
+  } else {
+    this->status &= ~FLAG_V;
+  }
+}
+
+inline void CPU::SetS(int value) {
+  if (value) {
+    this->status |= FLAG_S;
+  } else {
+    this->status &= ~FLAG_S;
+  }
+}
 
 inline u32 GetColor(u8 code) {
   u32 value = 0;

@@ -1,20 +1,21 @@
     // Store the number of pixels on the screen
     lda #0
-    sta 0
+    sta 0   // screenL
+    lda #$02
+    sta 2   // screenH
     lda #$D2
-    sta 1  // Now addresses 0 and 1 contain 00 D2  -> 0xD200
+    sta 3   // screenH max
 
-    ldx #0
+    ldy #0
     lda #0
 draw:
-    sta $0200,x
+    sta (0),y
     adc #1
     cmp #16
     bcc noreset
-    lda #0
+    lda #0  // reset color
 noreset:
-    inx
-    cpx 0  // TODO: variables
+    iny
     bcc draw
 
 end:
