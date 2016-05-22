@@ -16,7 +16,7 @@ draw:
     lda #0  // reset color
 noreset:
     iny
-    bcc draw
+    bne draw
 
 end:
     nop

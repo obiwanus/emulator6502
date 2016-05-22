@@ -42,7 +42,7 @@ struct CPU {
   inline bool GetD();
   inline bool GetB();
   inline bool GetV();
-  inline bool GetS();
+  inline bool GetN();
 
   inline void SetC(int);
   inline void SetZ(int);
@@ -50,7 +50,11 @@ struct CPU {
   inline void SetD(int);
   inline void SetB(int);
   inline void SetV(int);
-  inline void SetS(int);
+  inline void SetN(int);
+
+  inline void SetNZFor(u8);
+
+  void AbsJump(u8 *);
 };
 
 inline bool CPU::GetC() {
@@ -77,7 +81,7 @@ inline bool CPU::GetV() {
   return (this->status & FLAG_V) > 0;
 }
 
-inline bool CPU::GetS() {
+inline bool CPU::GetN() {
   return (this->status & FLAG_S) > 0;
 }
 
@@ -129,12 +133,21 @@ inline void CPU::SetV(int value) {
   }
 }
 
-inline void CPU::SetS(int value) {
+inline void CPU::SetN(int value) {
   if (value) {
     this->status |= FLAG_S;
   } else {
     this->status &= ~FLAG_S;
   }
+}
+
+inline void CPU::SetNZFor(u8 value) {
+  this->SetN(value >> 7 ? 1 : 0);
+  this->SetZ(value == 0 ? 1 : 0);
+}
+
+void CPU::AbsJump(u8 *pointer) {
+  this->PC = (u16)(*(pointer + 1) << 8 | *pointer);
 }
 
 inline u32 GetColor(u8 code) {
@@ -884,21 +897,190 @@ void CPU::Tick() {
 
   // Execute instruction
   switch (type) {
+    case I_ADC: {
+      u16 tmp = this->A + data + (u8)this->GetC();
+      this->A = (u8)tmp;
+      this->SetC(tmp > this->A ? 1 : 0);
+    } break;
+    case I_AND: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_ASL: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BIT: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CMP: {
+      u8 tmp = this->A - data;
+      this->SetNZFor(tmp);
+      this->SetC(this->A >= data ? 1 : 0);
+    } break;
+    case I_CPX: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CPY: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_DEC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_EOR: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_INC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_JMP: {
+      this->AbsJump(data_pointer);
+    } break;
+    case I_JSR: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
     case I_LDA: {
       this->A = data;
+      this->SetNZFor(data);
+    } break;
+    case I_LDX: {
+      this->X = data;
+      this->SetNZFor(data);
+    } break;
+    case I_LDY: {
+      this->Y = data;
+      this->SetNZFor(data);
+    } break;
+    case I_LSR: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_ORA: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_ROL: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_ROR: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_SBC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
     } break;
     case I_STA: {
       *data_pointer = this->A;
     } break;
-    case I_JMP: {
-      this->PC = data;
+    case I_STX: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_STY: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BRK: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CLC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CLD: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CLI: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_CLV: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_DEX: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_DEY: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
     } break;
     case I_INX: {
       this->X++;
+      this->SetNZFor(data);
+    } break;
+    case I_INY: {
+      this->Y++;
+      this->SetNZFor(data);
     } break;
     case I_NOP: {
-      // you lazy bastard!
+      // You lazy bastard!
     } break;
+    case I_PHA: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_PHP: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_PLA: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_PLP: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_RTI: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_RTS: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_SEC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_SED: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_SEI: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TAX: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TAY: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TSX: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TXA: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TXS: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_TYA: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BCC: {
+      if (!this->GetC()) {
+        this->AbsJump(data_pointer);
+      }
+    } break;
+    case I_BCS: {
+      if (this->GetC()) {
+        this->AbsJump(data_pointer);
+      }
+    } break;
+    case I_BEQ: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BMI: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BNE: {
+      if (!this->GetZ()) {
+        this->AbsJump(data_pointer);
+      }
+    } break;
+    case I_BPL: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BVC: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+    case I_BVS: {
+      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+    } break;
+
     default: {
       print("Panic! Unknown instruction, opcode %#02x\n", opcode);
       exit(1);
