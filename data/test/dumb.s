@@ -1,3 +1,8 @@
+    // Store the number of pixels on the screen
+    lda #0
+    sta 0
+    lda #$D2
+    sta 1  // Now addresses 0 and 1 contain 00 D2  -> 0xD200
 
     ldx #0
     lda #0
@@ -9,7 +14,7 @@ draw:
     lda #0
 noreset:
     inx
-    cmx #53760
+    cpx 0  // TODO: variables
     bcc draw
 
 end:

@@ -115,6 +115,234 @@ void CPU::Tick() {
   u8 opcode = this->memory[this->PC];
 
   if (mode == AM_Unknown) {
+    type = I_ADC;
+    switch (opcode) {
+      case 0x69: {
+        mode = AM_Immediate;
+      } break;
+      case 0x65: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x75: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x6D: {
+        mode = AM_Absolute;
+      } break;
+      case 0x7D: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0x79: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0x61: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0x71: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_AND;
+    switch (opcode) {
+      case 0x29: {
+        mode = AM_Immediate;
+      } break;
+      case 0x25: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x35: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x2D: {
+        mode = AM_Absolute;
+      } break;
+      case 0x3D: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0x39: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0x21: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0x31: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_ASL;
+    switch (opcode) {
+      case 0x0A: {
+        mode = AM_Accumulator;
+      } break;
+      case 0x06: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x16: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x0E: {
+        mode = AM_Absolute;
+      } break;
+      case 0x1E: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_BIT;
+    switch (opcode) {
+      case 0x2C: {
+        mode = AM_Absolute;
+      } break;
+      case 0x24: {
+        mode = AM_Zeropage;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_CMP;
+    switch (opcode) {
+      case 0xC9: {
+        mode = AM_Immediate;
+      } break;
+      case 0xC5: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xD5: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0xCD: {
+        mode = AM_Absolute;
+      } break;
+      case 0xDD: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0xD9: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0xC1: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0xD1: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_CPX;
+    switch (opcode) {
+      case 0xE0: {
+        mode = AM_Immediate;
+      } break;
+      case 0xE4: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xEC: {
+        mode = AM_Absolute;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_CPY;
+    switch (opcode) {
+      case 0xC0: {
+        mode = AM_Immediate;
+      } break;
+      case 0xC4: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xCC: {
+        mode = AM_Absolute;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_DEC;
+    switch (opcode) {
+      case 0xC6: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xD6: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0xCE: {
+        mode = AM_Absolute;
+      } break;
+      case 0xDE: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_EOR;
+    switch (opcode) {
+      case 0x49: {
+        mode = AM_Immediate;
+      } break;
+      case 0x45: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x55: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x4D: {
+        mode = AM_Absolute;
+      } break;
+      case 0x5D: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0x59: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0x41: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0x51: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_INC;
+    switch (opcode) {
+      case 0xE6: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xF6: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0xEE: {
+        mode = AM_Absolute;
+      } break;
+      case 0xFE: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_JMP;
+    switch (opcode) {
+      case 0x4C: {
+        mode = AM_Absolute;
+      } break;
+      case 0x6C: {
+        mode = AM_Indirect;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_JSR;
+    switch (opcode) {
+      case 0x20: {
+        mode = AM_Absolute;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
     type = I_LDA;
     switch (opcode) {
       case 0xA9: {
@@ -143,7 +371,164 @@ void CPU::Tick() {
       } break;
     }
   }
-
+  if (mode == AM_Unknown) {
+    type = I_LDX;
+    switch (opcode) {
+      case 0xA2: {
+        mode = AM_Immediate;
+      } break;
+      case 0xA6: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xB6: {
+        mode = AM_Zeropage_Y;
+      } break;
+      case 0xAE: {
+        mode = AM_Absolute;
+      } break;
+      case 0xBE: {
+        mode = AM_Absolute_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_LDY;
+    switch (opcode) {
+      case 0xA0: {
+        mode = AM_Immediate;
+      } break;
+      case 0xA4: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xB4: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0xAC: {
+        mode = AM_Absolute;
+      } break;
+      case 0xBC: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_LSR;
+    switch (opcode) {
+      case 0x4A: {
+        mode = AM_Accumulator;
+      } break;
+      case 0x46: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x56: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x4E: {
+        mode = AM_Absolute;
+      } break;
+      case 0x5E: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_ORA;
+    switch (opcode) {
+      case 0x09: {
+        mode = AM_Immediate;
+      } break;
+      case 0x05: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x15: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x0D: {
+        mode = AM_Absolute;
+      } break;
+      case 0x1D: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0x19: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0x01: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0x11: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_ROL;
+    switch (opcode) {
+      case 0x2A: {
+        mode = AM_Accumulator;
+      } break;
+      case 0x26: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x36: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x2E: {
+        mode = AM_Absolute;
+      } break;
+      case 0x3E: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_ROR;
+    switch (opcode) {
+      case 0x6A: {
+        mode = AM_Accumulator;
+      } break;
+      case 0x66: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x76: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x6E: {
+        mode = AM_Absolute;
+      } break;
+      case 0x7E: {
+        mode = AM_Absolute_X;
+      } break;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_SBC;
+    switch (opcode) {
+      case 0xE9: {
+        mode = AM_Immediate;
+      } break;
+      case 0xE5: {
+        mode = AM_Zeropage;
+      } break;
+      case 0xF5: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0xED: {
+        mode = AM_Absolute;
+      } break;
+      case 0xFD: {
+        mode = AM_Absolute_X;
+      } break;
+      case 0xF9: {
+        mode = AM_Absolute_Y;
+      } break;
+      case 0xE1: {
+        mode = AM_Indirect_X;
+      } break;
+      case 0xF1: {
+        mode = AM_Indirect_Y;
+      } break;
+    }
+  }
   if (mode == AM_Unknown) {
     type = I_STA;
     switch (opcode) {
@@ -170,15 +555,31 @@ void CPU::Tick() {
       } break;
     }
   }
-
   if (mode == AM_Unknown) {
-    type = I_JMP;
+    type = I_STX;
     switch (opcode) {
-      case 0x4C: {
+      case 0x86: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x96: {
+        mode = AM_Zeropage_Y;
+      } break;
+      case 0x8E: {
         mode = AM_Absolute;
       } break;
-      case 0x6C: {
-        mode = AM_Indirect;
+    }
+  }
+  if (mode == AM_Unknown) {
+    type = I_STY;
+    switch (opcode) {
+      case 0x84: {
+        mode = AM_Zeropage;
+      } break;
+      case 0x94: {
+        mode = AM_Zeropage_X;
+      } break;
+      case 0x8C: {
+        mode = AM_Absolute;
       } break;
     }
   }
@@ -186,13 +587,115 @@ void CPU::Tick() {
   if (mode == AM_Unknown) {
     mode = AM_Implied;
     switch (opcode) {
+      case 0x00: {
+        type = I_BRK;
+      } break;
+      case 0x18: {
+        type = I_CLC;
+      } break;
+      case 0xD8: {
+        type = I_CLD;
+      } break;
+      case 0x58: {
+        type = I_CLI;
+      } break;
+      case 0xB8: {
+        type = I_CLV;
+      } break;
+      case 0xCA: {
+        type = I_DEX;
+      } break;
+      case 0x88: {
+        type = I_DEY;
+      } break;
       case 0xE8: {
         type = I_INX;
       } break;
-
-      default: {
-        mode = AM_Unknown;
+      case 0xC8: {
+        type = I_INY;
       } break;
+      case 0xEA: {
+        type = I_NOP;
+      } break;
+      case 0x48: {
+        type = I_PHA;
+      } break;
+      case 0x08: {
+        type = I_PHP;
+      } break;
+      case 0x68: {
+        type = I_PLA;
+      } break;
+      case 0x28: {
+        type = I_PLP;
+      } break;
+      case 0x40: {
+        type = I_RTI;
+      } break;
+      case 0x60: {
+        type = I_RTS;
+      } break;
+      case 0x38: {
+        type = I_SEC;
+      } break;
+      case 0xF8: {
+        type = I_SED;
+      } break;
+      case 0x78: {
+        type = I_SEI;
+      } break;
+      case 0xAA: {
+        type = I_TAX;
+      } break;
+      case 0xA8: {
+        type = I_TAY;
+      } break;
+      case 0xBA: {
+        type = I_TSX;
+      } break;
+      case 0x8A: {
+        type = I_TXA;
+      } break;
+      case 0x9A: {
+        type = I_TXS;
+      } break;
+      case 0x98: {
+        type = I_TYA;
+      } break;
+
+      default: { mode = AM_Unknown; } break;
+    }
+  }
+
+  if (mode == AM_Unknown) {
+    mode = AM_Relative;
+    switch (opcode) {
+      case 0x90: {
+        type = I_BCC;
+      } break;
+      case 0xB0: {
+        type = I_BCS;
+      } break;
+      case 0xF0: {
+        type = I_BEQ;
+      } break;
+      case 0x30: {
+        type = I_BMI;
+      } break;
+      case 0xD0: {
+        type = I_BNE;
+      } break;
+      case 0x10: {
+        type = I_BPL;
+      } break;
+      case 0x50: {
+        type = I_BVC;
+      } break;
+      case 0x70: {
+        type = I_BVS;
+      } break;
+
+      default: { mode = AM_Unknown; } break;
     }
   }
 
@@ -200,6 +703,8 @@ void CPU::Tick() {
   if (mode == AM_Unknown) {
     type = I_NOP;
     mode = AM_Implied;
+    print("WARNING: Unknown instruction treated as NOP, opcode %#02x\n",
+          opcode);
   }
 
   int bytes = BytesForAddressingMode(mode);
@@ -287,7 +792,7 @@ void CPU::Tick() {
       // you lazy bastard!
     } break;
     default: {
-      print("Panic! (unknown instruction)\n");
+      print("Panic! Unknown instruction, opcode %#02x\n", opcode);
       exit(1);
     }
   }
