@@ -897,13 +897,16 @@ void CPU::Tick() {
       this->SetC(tmp > this->A ? 1 : 0);
     } break;
     case I_AND: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction AND not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_ASL: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction ASL not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BIT: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BIT not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CMP: {
       u8 tmp = this->A - data;
@@ -911,25 +914,31 @@ void CPU::Tick() {
       this->SetC(this->A >= data ? 1 : 0);
     } break;
     case I_CPX: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CPX not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CPY: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CPY not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_DEC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction DEC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_EOR: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction EOR not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_INC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction INC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_JMP: {
-      this->PC = operand;
+      this->PC = (u16)operand;
     } break;
     case I_JSR: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction JSR not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_LDA: {
       this->A = data;
@@ -944,135 +953,169 @@ void CPU::Tick() {
       this->SetNZFor(data);
     } break;
     case I_LSR: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction LSR not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_ORA: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction ORA not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_ROL: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction ROL not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_ROR: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction ROR not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_SBC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction SBC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_STA: {
       *data_pointer = this->A;
     } break;
     case I_STX: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction STX not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_STY: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction STY not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BRK: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BRK not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CLC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CLC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CLD: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CLD not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CLI: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CLI not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_CLV: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction CLV not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_DEX: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction DEX not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_DEY: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction DEY not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_INX: {
       this->X++;
-      this->SetNZFor(data);
+      this->SetNZFor(this->Y);
     } break;
     case I_INY: {
       this->Y++;
-      this->SetNZFor(data);
+      this->SetNZFor(this->Y);
     } break;
     case I_NOP: {
       // You lazy bastard!
     } break;
     case I_PHA: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction PHA not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_PHP: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction PHP not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_PLA: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction PLA not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_PLP: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction PLP not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_RTI: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction RTI not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_RTS: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction RTS not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_SEC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction SEC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_SED: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction SED not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_SEI: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction SEI not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TAX: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TAX not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TAY: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TAY not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TSX: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TSX not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TXA: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TXA not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TXS: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TXS not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_TYA: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction TYA not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BCC: {
       if (!this->GetC()) {
-        this->PC = operand;
+        this->PC = (u16)operand;
       }
     } break;
     case I_BCS: {
       if (this->GetC()) {
-        this->PC = operand;
+        this->PC = (u16)operand;
       }
     } break;
     case I_BEQ: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BEQ not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BMI: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BMI not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BNE: {
       if (!this->GetZ()) {
-        this->PC = operand;
+        this->PC = (u16)operand;
       }
     } break;
     case I_BPL: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BPL not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BVC: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BVC not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
     case I_BVS: {
-      print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
+      print("ERROR: instruction BVS not implemented. Opcode %#02x\n", opcode);
+      exit(1);
     } break;
 
     default: {

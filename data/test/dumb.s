@@ -7,7 +7,7 @@
     sta 2   // screenH max
 
     ldy #0
-    lda #0
+    lda #2
 draw:
     sta (0),y
     adc #1

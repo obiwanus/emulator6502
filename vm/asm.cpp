@@ -155,12 +155,13 @@ struct Instruction {
   int operand;
   Token *deferred_operand;  // to be looked up in the symbol table
   Token *mnemonic;          // for error reporting
+  int address;              // for labels. filled at a later stage
 };
 
 struct SymbolTableEntry {
   char *symbol;
   int value;
-  Instruction *instruction;
+  Instruction *instruction;  // the instruction immediately following the label
 };
 
 struct SymbolTable {
@@ -440,6 +441,8 @@ int BytesForAddressingMode(AddressingMode mode) {
   else if (mode == AM_Zeropage)
     bytes = 2;
   else if (mode == AM_Zeropage_X)
+    bytes = 2;
+  else if (mode == AM_Zeropage_Y)
     bytes = 2;
   else if (mode == AM_Absolute)
     bytes = 3;
@@ -891,6 +894,34 @@ static int LoadProgram(char *filename, u16 memory_address) {
 
   u8 *memory = (u8 *)gMachineMemory + memory_address;  // for debugging
 
+  // Fill in instruction addresses that are used in label resolving
+  int address = memory_address;
+  for (int i = 0; i < assembler.num_instructions; i++) {
+    instruction = assembler.instructions + i;
+    instruction->address = address;
+
+    // Check for zero page - important for instruction size!
+    if (instruction->deferred_operand == NULL && instruction->operand <= 0xFF) {
+      // If it's a deferred operand it's NOT a zero page mode in our asm
+      // TODO: think about that (when there's relative addressing supported)
+      if (instruction->mode == AMF_ABSOLUTE &&
+          (instruction->modes & AMF_ZERO_PAGE)) {
+        instruction->mode = AM_Zeropage;
+      }
+      if (instruction->mode == AMF_ABSOLUTE_X &&
+          (instruction->modes & AMF_ZERO_PAGE_X)) {
+        instruction->mode = AM_Zeropage_X;
+      }
+      if (instruction->mode == AMF_ABSOLUTE_Y &&
+          (instruction->modes & AMF_ZERO_PAGE_Y)) {
+        instruction->mode = AM_Zeropage_Y;
+      }
+    }
+
+    int bytes = BytesForAddressingMode(instruction->mode);
+    address += bytes;
+  }
+
   for (int i = 0; i < assembler.num_instructions; i++) {
     instruction = assembler.instructions + i;
 
@@ -900,6 +931,8 @@ static int LoadProgram(char *filename, u16 memory_address) {
           symbol_table.GetEntry(instruction->deferred_operand);
       if (entry == NULL) {
         instruction->deferred_operand->SyntaxError("Unknown identifier");
+      } else if (entry->instruction != NULL) {
+        instruction->operand = entry->instruction->address;
       } else {
         instruction->operand = entry->value;
       }
@@ -915,21 +948,6 @@ static int LoadProgram(char *filename, u16 memory_address) {
         instruction->mnemonic->SyntaxError(
             "Only zero page addressing is supported");
       }
-    }
-
-    if (instruction->mode == AMF_ABSOLUTE &&
-        (instruction->modes & AMF_ZERO_PAGE) && instruction->operand <= 0xFF) {
-      instruction->mode = AM_Zeropage;
-    }
-    if (instruction->mode == AMF_ABSOLUTE_X &&
-        (instruction->modes & AMF_ZERO_PAGE_X) &&
-        instruction->operand <= 0xFF) {
-      instruction->mode = AM_Zeropage_X;
-    }
-    if (instruction->mode == AMF_ABSOLUTE_Y &&
-        (instruction->modes & AMF_ZERO_PAGE_Y) &&
-        instruction->operand <= 0xFF) {
-      instruction->mode = AM_Zeropage_Y;
     }
 
     // Get opcode ************************************************
@@ -1267,7 +1285,6 @@ static int LoadProgram(char *filename, u16 memory_address) {
         else
           error = true;
       } break;
-
     }
 
     // Single mode instructions below
