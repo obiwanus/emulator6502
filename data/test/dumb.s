@@ -2,9 +2,9 @@
     lda #0
     sta 0   // screenL
     lda #$02
-    sta 2   // screenH
+    sta 1   // screenH
     lda #$D2
-    sta 3   // screenH max
+    sta 2   // screenH max
 
     ldy #0
     lda #0

@@ -454,7 +454,7 @@ int BytesForAddressingMode(AddressingMode mode) {
   else if (mode == AM_Implied)
     bytes = 1;
   else if (mode == AM_Relative)
-    bytes = 2;
+    bytes = 3;
   else if (mode == AM_Accumulator)
     bytes = 1;
   else if (mode == AM_Indirect)

@@ -15,6 +15,75 @@ global u8 *gVideoMemory;
 
 #define SCREEN_ZOOM 4
 
+inline u32 GetColor(u8 code) {
+  u32 value = 0;
+  switch (code) {
+    case 0: {
+      value = 0x000000;  // black
+    } break;
+    case 1: {
+      value = 0xFF00FF;  // magenta
+    } break;
+    case 2: {
+      value = 0x00008B;  // dark blue
+    } break;
+    case 3: {
+      value = 0x800080;  // purple
+    } break;
+    case 4: {
+      value = 0x006400;  // dark green
+    } break;
+    case 5: {
+      value = 0xA8A8A8;  // dark grey
+    } break;
+    case 6: {
+      value = 0x0000CD;  // medium blue
+    } break;
+    case 7: {
+      value = 0xADD8E6;  // light blue
+    } break;
+    case 8: {
+      value = 0x8B4513;  // brown
+    } break;
+    case 9: {
+      value = 0xFFA500;  // orange
+    } break;
+    case 10: {
+      value = 0xD3D3D3;  // light grey
+    } break;
+    case 11: {
+      value = 0xFF69B4;  // pink
+    } break;
+    case 12: {
+      value = 0x90EE90;  // light green
+    } break;
+    case 13: {
+      value = 0xFFFF00;  // yellow
+    } break;
+    case 14: {
+      value = 0x00FFFF;  // cyan
+    } break;
+    case 15: {
+      value = 0xFFFFFF;  // white
+    } break;
+    default: {
+      value = 0x00FF00;  // very bright green
+    } break;
+  }
+  return value;
+}
+
+static void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
+  // Copy data from the machine's video memory to our "display"
+  for (int y = 0; y < kWindowHeight; y++) {
+    for (int x = 0; x < kWindowWidth; x++) {
+      u8 *SrcPixel = VideoMemory + kWindowWidth * y + x;
+      u32 *DestPixel = (u32 *)BitmapMemory + (kWindowWidth * y + x);
+      *DestPixel = GetColor(*SrcPixel);
+    }
+  }
+}
+
 #define FLAG_C 0x01
 #define FLAG_Z 0x02
 #define FLAG_I 0x04
@@ -53,9 +122,17 @@ struct CPU {
   inline void SetN(int);
 
   inline void SetNZFor(u8);
-
-  void AbsJump(u8 *);
 };
+
+CPU::CPU() {
+  this->A = 0;
+  this->X = 0;
+  this->Y = 0;
+  this->SP = 0;
+  this->status = 0;
+  this->PC = kPC_start;
+  this->memory = (u8 *)gMachineMemory;
+}
 
 inline bool CPU::GetC() {
   return (this->status & FLAG_C) > 0;
@@ -144,89 +221,6 @@ inline void CPU::SetN(int value) {
 inline void CPU::SetNZFor(u8 value) {
   this->SetN(value >> 7 ? 1 : 0);
   this->SetZ(value == 0 ? 1 : 0);
-}
-
-void CPU::AbsJump(u8 *pointer) {
-  this->PC = (u16)(*(pointer + 1) << 8 | *pointer);
-}
-
-inline u32 GetColor(u8 code) {
-  u32 value = 0;
-  switch (code) {
-    case 0: {
-      value = 0x000000;  // black
-    } break;
-    case 1: {
-      value = 0xFF00FF;  // magenta
-    } break;
-    case 2: {
-      value = 0x00008B;  // dark blue
-    } break;
-    case 3: {
-      value = 0x800080;  // purple
-    } break;
-    case 4: {
-      value = 0x006400;  // dark green
-    } break;
-    case 5: {
-      value = 0xA8A8A8;  // dark grey
-    } break;
-    case 6: {
-      value = 0x0000CD;  // medium blue
-    } break;
-    case 7: {
-      value = 0xADD8E6;  // light blue
-    } break;
-    case 8: {
-      value = 0x8B4513;  // brown
-    } break;
-    case 9: {
-      value = 0xFFA500;  // orange
-    } break;
-    case 10: {
-      value = 0xD3D3D3;  // light grey
-    } break;
-    case 11: {
-      value = 0xFF69B4;  // pink
-    } break;
-    case 12: {
-      value = 0x90EE90;  // light green
-    } break;
-    case 13: {
-      value = 0xFFFF00;  // yellow
-    } break;
-    case 14: {
-      value = 0x00FFFF;  // cyan
-    } break;
-    case 15: {
-      value = 0xFFFFFF;  // white
-    } break;
-    default: {
-      value = 0x00FF00;  // very bright green
-    } break;
-  }
-  return value;
-}
-
-static void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
-  // Copy data from the machine's video memory to our "display"
-  for (int y = 0; y < kWindowHeight; y++) {
-    for (int x = 0; x < kWindowWidth; x++) {
-      u8 *SrcPixel = VideoMemory + kWindowWidth * y + x;
-      u32 *DestPixel = (u32 *)BitmapMemory + (kWindowWidth * y + x);
-      *DestPixel = GetColor(*SrcPixel);
-    }
-  }
-}
-
-CPU::CPU() {
-  this->A = 0;
-  this->X = 0;
-  this->Y = 0;
-  this->SP = 0;
-  this->status = 0;
-  this->PC = kPC_start;
-  this->memory = (u8 *)gMachineMemory;
 }
 
 void CPU::Tick() {
@@ -932,7 +926,7 @@ void CPU::Tick() {
       print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
     } break;
     case I_JMP: {
-      this->AbsJump(data_pointer);
+      this->PC = operand;
     } break;
     case I_JSR: {
       print("WARNING: instruction not implemented. Opcode %#02x\n", opcode);
@@ -1052,12 +1046,12 @@ void CPU::Tick() {
     } break;
     case I_BCC: {
       if (!this->GetC()) {
-        this->AbsJump(data_pointer);
+        this->PC = operand;
       }
     } break;
     case I_BCS: {
       if (this->GetC()) {
-        this->AbsJump(data_pointer);
+        this->PC = operand;
       }
     } break;
     case I_BEQ: {
@@ -1068,7 +1062,7 @@ void CPU::Tick() {
     } break;
     case I_BNE: {
       if (!this->GetZ()) {
-        this->AbsJump(data_pointer);
+        this->PC = operand;
       }
     } break;
     case I_BPL: {

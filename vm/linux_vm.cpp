@@ -26,8 +26,9 @@ global void *gLinuxBitmapMemory;
 global XImage *gXImage;
 
 static void *machine_thread(void *arg) {
+  CPU cpu = CPU();
   while (gRunning) {
-    MachineTick();
+    cpu.Tick();
     usleep(1000);
   }
 }
