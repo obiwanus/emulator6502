@@ -1,4 +1,5 @@
     // Store the number of pixels on the screen
+
     lda #0
     sta 0   // screenL
     lda #$02

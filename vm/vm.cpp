@@ -15,62 +15,30 @@ global u8 *gVideoMemory;
 
 #define SCREEN_ZOOM 4
 
+
 inline u32 GetColor(u8 code) {
-  u32 value = 0;
-  switch (code) {
-    case 0: {
-      value = 0x000000;  // black
-    } break;
-    case 1: {
-      value = 0xFF00FF;  // magenta
-    } break;
-    case 2: {
-      value = 0x00008B;  // dark blue
-    } break;
-    case 3: {
-      value = 0x800080;  // purple
-    } break;
-    case 4: {
-      value = 0x006400;  // dark green
-    } break;
-    case 5: {
-      value = 0xA8A8A8;  // dark grey
-    } break;
-    case 6: {
-      value = 0x0000CD;  // medium blue
-    } break;
-    case 7: {
-      value = 0xADD8E6;  // light blue
-    } break;
-    case 8: {
-      value = 0x8B4513;  // brown
-    } break;
-    case 9: {
-      value = 0xFFA500;  // orange
-    } break;
-    case 10: {
-      value = 0xD3D3D3;  // light grey
-    } break;
-    case 11: {
-      value = 0xFF69B4;  // pink
-    } break;
-    case 12: {
-      value = 0x90EE90;  // light green
-    } break;
-    case 13: {
-      value = 0xFFFF00;  // yellow
-    } break;
-    case 14: {
-      value = 0x00FFFF;  // cyan
-    } break;
-    case 15: {
-      value = 0xFFFFFF;  // white
-    } break;
-    default: {
-      value = 0x00FF00;  // very bright green
-    } break;
+  if (code > 15) {
+    return 0x00FF00;  // very bright green
   }
-  return value;
+  u32 palette[16] = {
+    0x000000,  // black
+    0xFF00FF,  // magenta
+    0x00008B,  // dark blue
+    0x800080,  // purple
+    0x006400,  // dark green
+    0xA8A8A8,  // dark grey
+    0x0000CD,  // medium blue
+    0xADD8E6,  // light blue
+    0x8B4513,  // brown
+    0xFFA500,  // orange
+    0xD3D3D3,  // light grey
+    0xFF69B4,  // pink
+    0x90EE90,  // light green
+    0xFFFF00,  // yellow
+    0x00FFFF,  // cyan
+    0xFFFFFF,  // white
+  };
+  return palette[code];
 }
 
 static void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
