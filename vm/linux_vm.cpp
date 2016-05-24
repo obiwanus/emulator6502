@@ -27,9 +27,9 @@ global XImage *gXImage;
 
 static void *machine_thread(void *arg) {
   CPU cpu = CPU();
-  while (gRunning) {
+  while (cpu.is_running) {
     cpu.Tick();
-    usleep(1000);
+    usleep(10);
   }
 }
 
