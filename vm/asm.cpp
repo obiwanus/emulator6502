@@ -146,6 +146,8 @@ enum InstructionType {
   I_TXA,
   I_TXS,
   I_TYA,
+
+  I_END,  // non-canonical
 };
 
 struct Instruction {
@@ -772,6 +774,9 @@ static int LoadProgram(char *filename, u16 memory_address) {
         } else if (token->Equals("TYA")) {
           type = I_TYA;
           modes = AMF_MOST_COMMON;
+        } else if (token->Equals("END")) {
+          type = I_END;
+          modes = AMF_IMPLIED;
         } else {
           assembler.SyntaxError("Unknown command");
         }
@@ -1339,6 +1344,8 @@ static int LoadProgram(char *filename, u16 memory_address) {
         opcode = 0x9A;
       else if (type == I_TYA)
         opcode = 0x98;
+      else if (type == I_END)
+        opcode = 0xFF;
       else
         error = true;
     }

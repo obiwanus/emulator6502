@@ -3,11 +3,9 @@
     sta 0   // screenL
     lda #$02
     sta 1   // screenH
-    lda #$D2
-    sta 2   // screenH max
 
     ldy #0
-    lda #2
+    lda #0
 draw:
     sta (0),y
     adc #1
@@ -17,7 +15,9 @@ draw:
 noreset:
     iny
     bne draw
+    inc 1
+    ldx #$d3
+    cpx 1
+    bcs draw
 
-end:
-    nop
-    jmp end
+    end

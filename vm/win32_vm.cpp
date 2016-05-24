@@ -60,10 +60,13 @@ Win32WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 DWORD WINAPI MachineThread(LPVOID lpParam) {
   CPU cpu = CPU();
 
-  while (gRunning) {
+  while (cpu.is_running) {
     cpu.Tick();
     Sleep(1);
   }
+
+  print("CPU has finished work\n");
+
   return 0;
 }
 
@@ -74,6 +77,20 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   WindowClass.lpfnWndProc = Win32WindowProc;
   WindowClass.hInstance = hInstance;
   WindowClass.lpszClassName = "VMWindowClass";
+
+  // Set target sleep resolution
+  {
+    TIMECAPS tc;
+    UINT wTimerRes;
+
+    if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) != TIMERR_NOERROR) {
+      OutputDebugStringA("Cannot set the sleep resolution\n");
+      exit(1);
+    }
+
+    wTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax);  // 1 ms
+    timeBeginPeriod(wTimerRes);
+  }
 
   if (RegisterClass(&WindowClass)) {
     // Create window so that its client area is exactly kWindowWidth/Height

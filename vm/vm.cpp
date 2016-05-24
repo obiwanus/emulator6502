@@ -101,6 +101,7 @@ struct CPU {
   u16 PC;
 
   u8 *memory;
+  bool is_running;
 
   CPU();
   void Tick();
@@ -132,6 +133,7 @@ CPU::CPU() {
   this->status = 0;
   this->PC = kPC_start;
   this->memory = (u8 *)gMachineMemory;
+  this->is_running = true;
 }
 
 inline bool CPU::GetC() {
@@ -777,6 +779,9 @@ void CPU::Tick() {
       case 0x98: {
         type = I_TYA;
       } break;
+      case 0xFF: {
+        type = I_END;
+      } break;
 
       default: { mode = AM_Unknown; } break;
     }
@@ -914,12 +919,14 @@ void CPU::Tick() {
       this->SetC(this->A >= data ? 1 : 0);
     } break;
     case I_CPX: {
-      print("ERROR: instruction CPX not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      u8 tmp = this->X - data;
+      this->SetNZFor(tmp);
+      this->SetC(this->X >= data ? 1 : 0);
     } break;
     case I_CPY: {
-      print("ERROR: instruction CPY not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      u8 tmp = this->Y - data;
+      this->SetNZFor(tmp);
+      this->SetC(this->Y >= data ? 1 : 0);
     } break;
     case I_DEC: {
       print("ERROR: instruction DEC not implemented. Opcode %#02x\n", opcode);
@@ -930,8 +937,8 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_INC: {
-      print("ERROR: instruction INC not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      *data_pointer = *data_pointer + 1;
+      this->SetNZFor(*data_pointer);
     } break;
     case I_JMP: {
       this->PC = (u16)operand;
@@ -1116,6 +1123,9 @@ void CPU::Tick() {
     case I_BVS: {
       print("ERROR: instruction BVS not implemented. Opcode %#02x\n", opcode);
       exit(1);
+    } break;
+    case I_END: {
+      this->is_running = false;
     } break;
 
     default: {
