@@ -62,7 +62,6 @@ DWORD WINAPI MachineThread(LPVOID lpParam) {
 
   while (cpu.is_running) {
     cpu.Tick();
-    Sleep(1);
   }
 
   print("CPU has finished work\n");

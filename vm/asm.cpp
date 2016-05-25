@@ -19,6 +19,7 @@ enum TokenType {
   Token_OpenParen,
   Token_CloseParen,
   Token_Comma,
+  Token_Define,
 
   Token_SyntaxError,
 };
@@ -151,20 +152,20 @@ enum InstructionType {
 };
 
 global int gBytesForAddressingMode[AM_Accumulator + 1] = {
-  0, // AM_Unknown
-  2, // AM_Immediate
-  3, // AM_Absolute
-  3, // AM_Relative
-  3, // AM_Absolute_X
-  3, // AM_Absolute_Y
-  2, // AM_Zeropage
-  2, // AM_Zeropage_X
-  2, // AM_Zeropage_Y
-  2, // AM_Indirect_X
-  2, // AM_Indirect_Y
-  3, // AM_Indirect
-  1, // AM_Implied
-  1, // AM_Accumulator
+    0,  // AM_Unknown
+    2,  // AM_Immediate
+    3,  // AM_Absolute
+    3,  // AM_Relative
+    3,  // AM_Absolute_X
+    3,  // AM_Absolute_Y
+    2,  // AM_Zeropage
+    2,  // AM_Zeropage_X
+    2,  // AM_Zeropage_Y
+    2,  // AM_Indirect_X
+    2,  // AM_Indirect_Y
+    3,  // AM_Indirect
+    1,  // AM_Implied
+    1,  // AM_Accumulator
 };
 
 struct InstructionTypeAndMode {
@@ -768,6 +769,9 @@ static int LoadProgram(char *filename, u16 memory_address) {
         tokenizer.at++;
       } else {
         token->type = Token_Identifier;
+        if (token->Equals("DEFINE")) {
+          token->type = Token_Define;
+        }
       }
     } else if (c == '#') {
       token->type = Token_Hash;
@@ -848,6 +852,12 @@ static int LoadProgram(char *filename, u16 memory_address) {
         SymbolTableEntry *entry = symbol_table.AddEntry(token, 0);
         entry->instruction =
             (instruction + 1);  // we'll resolve its address later
+      } break;
+
+      case Token_Define: {
+        token = assembler.RequireToken(Token_Identifier);
+        int value = assembler.RequireNumber();
+        symbol_table.AddEntry(token, value);
       } break;
 
       case Token_Identifier: {
@@ -1216,10 +1226,10 @@ static int LoadProgram(char *filename, u16 memory_address) {
 
     if (opcode == 0x00 && type != I_BRK) {
       bool found = false;
-      for (int i = 0; i <= 256; i++) {
-        InstructionTypeAndMode tm = gOpcodeToInstruction[i];
+      for (int o = 0; o <= 256; o++) {
+        InstructionTypeAndMode tm = gOpcodeToInstruction[o];
         if (tm.type == type && tm.mode == mode) {
-          opcode = (u8)i;
+          opcode = (u8)o;
           found = true;
           gInstructionToOpcode[type][mode] = opcode;
           break;

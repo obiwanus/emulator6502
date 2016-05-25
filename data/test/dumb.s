@@ -1,14 +1,16 @@
-    // Store the number of pixels on the screen
+    define screenL 0
+    define screenH 1
+    define screenHMax $d3  // TODO
 
     lda #0
-    sta 0   // screenL
+    sta screenL
     lda #$02
-    sta 1   // screenH
+    sta screenH
 
     ldy #0
     lda #0
 draw:
-    sta (0),y
+    sta (screenL),y
     adc #1
     cmp #16
     bcc noreset
@@ -16,9 +18,9 @@ draw:
 noreset:
     iny
     bne draw
-    inc 1
+    inc screenH
     ldx #$d3
-    cpx 1
+    cpx screenH
     bcs draw
 
     end
