@@ -19,8 +19,11 @@ noreset:
     iny
     bne draw
     inc screenH
-    ldx #$d3
-    cpx screenH
+    // TODO: why is it different, debug
+    pha
+    lda #$d3
+    cmp screenH
+    pla
     bcs draw
 
     end

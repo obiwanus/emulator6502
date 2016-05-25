@@ -6,6 +6,7 @@ global int const kWindowWidth = 280;
 global int const kWindowHeight = 192;
 
 global u16 const kPC_start = 0xD400;
+global int const kSP_start = 0x100;
 
 global void *gMachineMemory;
 global u8 *gVideoMemory;
@@ -394,16 +395,24 @@ void CPU::Tick() {
       // You lazy bastard!
     } break;
     case I_PHA: {
-      print("ERROR: instruction PHA not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      if (this->SP >= 0xFF) {
+        print("Stack overflow\n");
+        exit(1);
+      }
+      this->memory[kSP_start + this->SP] = this->A;
+      this->SP++;
     } break;
     case I_PHP: {
       print("ERROR: instruction PHP not implemented. Opcode %#02x\n", opcode);
       exit(1);
     } break;
     case I_PLA: {
-      print("ERROR: instruction PLA not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      if (this->SP == 0) {
+        print("Stack underflow\n");
+        exit(1);
+      }
+      this->A = this->memory[kSP_start + this->SP];
+      this->SP--;
     } break;
     case I_PLP: {
       print("ERROR: instruction PLP not implemented. Opcode %#02x\n", opcode);
