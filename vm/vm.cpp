@@ -411,8 +411,8 @@ void CPU::Tick() {
         print("Stack underflow\n");
         exit(1);
       }
-      this->A = this->memory[kSP_start + this->SP];
       this->SP--;
+      this->A = this->memory[kSP_start + this->SP];
     } break;
     case I_PLP: {
       print("ERROR: instruction PLP not implemented. Opcode %#02x\n", opcode);

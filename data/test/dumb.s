@@ -19,7 +19,6 @@ noreset:
     iny
     bne draw
     inc screenH
-    // TODO: why is it different, debug
     pha
     lda #$d3
     cmp screenH
