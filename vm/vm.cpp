@@ -91,6 +91,9 @@ struct CPU {
   inline void SetN(int);
 
   inline void SetNZFor(u8);
+
+  void Push(u8);
+  u8 Pull();
 };
 
 CPU::CPU() {
@@ -177,6 +180,25 @@ inline void CPU::SetN(int value) {
 inline void CPU::SetNZFor(u8 value) {
   this->SetN(value >> 7 ? 1 : 0);
   this->SetZ(value == 0 ? 1 : 0);
+}
+
+void CPU::Push(u8 value) {
+  // Push a value onto the top of the stack
+  if (this->SP >= 0xFF) {
+    print("Stack overflow\n");
+    exit(1);
+  }
+  this->memory[kSP_start + this->SP] = value;
+  this->SP++;
+}
+
+u8 CPU::Pull() {
+  if (this->SP == 0) {
+    print("Stack underflow\n");
+    exit(1);
+  }
+  this->SP--;
+  return this->memory[kSP_start + this->SP];
 }
 
 void CPU::Tick() {
@@ -294,8 +316,8 @@ void CPU::Tick() {
       this->SetC(this->Y >= data ? 1 : 0);
     } break;
     case I_DEC: {
-      print("ERROR: instruction DEC not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      *data_pointer = *data_pointer - 1;
+      this->SetNZFor(*data_pointer);
     } break;
     case I_EOR: {
       print("ERROR: instruction EOR not implemented. Opcode %#02x\n", opcode);
@@ -309,8 +331,9 @@ void CPU::Tick() {
       this->PC = (u16)operand;
     } break;
     case I_JSR: {
-      print("ERROR: instruction JSR not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->Push((u8)(this->PC >> 8));
+      this->Push((u8)(this->PC & 0x00FF));
+      this->PC = (u16)operand;
     } break;
     case I_LDA: {
       this->A = data;
@@ -360,8 +383,7 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_CLC: {
-      print("ERROR: instruction CLC not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->SetC(0);
     } break;
     case I_CLD: {
       print("ERROR: instruction CLD not implemented. Opcode %#02x\n", opcode);
@@ -376,16 +398,16 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_DEX: {
-      print("ERROR: instruction DEX not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->X--;
+      this->SetNZFor(this->X);
     } break;
     case I_DEY: {
-      print("ERROR: instruction DEY not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->Y--;
+      this->SetNZFor(this->Y);
     } break;
     case I_INX: {
       this->X++;
-      this->SetNZFor(this->Y);
+      this->SetNZFor(this->X);
     } break;
     case I_INY: {
       this->Y++;
@@ -395,24 +417,14 @@ void CPU::Tick() {
       // You lazy bastard!
     } break;
     case I_PHA: {
-      if (this->SP >= 0xFF) {
-        print("Stack overflow\n");
-        exit(1);
-      }
-      this->memory[kSP_start + this->SP] = this->A;
-      this->SP++;
+      this->Push(this->A);
     } break;
     case I_PHP: {
       print("ERROR: instruction PHP not implemented. Opcode %#02x\n", opcode);
       exit(1);
     } break;
     case I_PLA: {
-      if (this->SP == 0) {
-        print("Stack underflow\n");
-        exit(1);
-      }
-      this->SP--;
-      this->A = this->memory[kSP_start + this->SP];
+      this->A = this->Pull();
     } break;
     case I_PLP: {
       print("ERROR: instruction PLP not implemented. Opcode %#02x\n", opcode);
@@ -423,8 +435,9 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_RTS: {
-      print("ERROR: instruction RTS not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      u8 PC_low = this->Pull();
+      u8 PC_high = this->Pull();
+      this->PC = PC_high << 8 | PC_low;
     } break;
     case I_SEC: {
       print("ERROR: instruction SEC not implemented. Opcode %#02x\n", opcode);
@@ -473,8 +486,9 @@ void CPU::Tick() {
       }
     } break;
     case I_BEQ: {
-      print("ERROR: instruction BEQ not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      if (this->GetZ()) {
+        this->PC = (u16)operand;
+      }
     } break;
     case I_BMI: {
       print("ERROR: instruction BMI not implemented. Opcode %#02x\n", opcode);

@@ -128,7 +128,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       GlobalBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
       // Load the program
-      LoadProgram("test/dumb.s", kPC_start);
+      LoadProgram("test/pong.s", kPC_start);
 
       // Run the machine
       HANDLE MainMachineThread = CreateThread(0, 0, MachineThread, 0, 0, 0);

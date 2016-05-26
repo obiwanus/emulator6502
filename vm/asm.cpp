@@ -206,7 +206,7 @@ const InstructionTypeAndMode gOpcodeToInstruction[256] = {
     {I_ORA, AM_Absolute_X},
     {I_ASL, AM_Absolute_X},
     {},
-    {I_JSR, AM_Implied},
+    {I_JSR, AM_Absolute},
     {I_AND, AM_Indirect_X},
     {},
     {},

@@ -13,7 +13,7 @@ define  ball_dir_x  $04
 define  ball_dir_y  $05
 define  ball_display    $06
 define  ball_display_h  $07
-define  screen_border   31
+define  screen_border   191
 
 
   jsr init
@@ -22,9 +22,12 @@ mainloop:
   jsr get_input
   jsr update_paddles
   jsr update_ball
-  jsr draw_separator
+  // jsr draw_separator
   jsr draw_paddles
   jsr draw_ball
+  jsr sleep
+  jsr sleep
+  jsr sleep
   jsr sleep
   jmp mainloop
 
@@ -111,7 +114,7 @@ draw_separator:
   // Init draw cursor
   lda #0
   sta draw_cursor
-  lda #$2
+  lda #2
   sta draw_cursor_h
 
   lda #$0f

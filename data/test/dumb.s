@@ -1,6 +1,6 @@
     define screenL 0
     define screenH 1
-    define screenHMax $d3  // TODO
+    define screenHmax $d3
 
     lda #0
     sta screenL
@@ -20,9 +20,11 @@ noreset:
     bne draw
     inc screenH
     pha
-    lda #$d3
+    lda #screenHmax
     cmp screenH
     pla
     bcs draw
 
     end
+
+
