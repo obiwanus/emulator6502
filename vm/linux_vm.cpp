@@ -27,6 +27,7 @@ static void *machine_thread(void *arg) {
   CPU cpu = CPU();
   while (cpu.is_running) {
     cpu.Tick();
+    usleep(1);
   }
   print("CPU has finished work\n");
 }
@@ -86,7 +87,7 @@ int main(int argc, char const *argv[]) {
   gVideoMemory = (u8 *)gMachineMemory + 0x0200;
 
   // Load the program at $D400
-  LoadProgram("test/dumb.s", 0xD400);
+  LoadProgram("test/pong.s", 0xD400);
 
   gRunning = true;
 

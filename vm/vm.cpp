@@ -341,8 +341,8 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_ORA: {
-      print("ERROR: instruction ORA not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->A |= operand;
+      this->SetNZFor(this->A);
     } break;
     case I_ROL: {
       print("ERROR: instruction ROL not implemented. Opcode %#02x\n", opcode);
