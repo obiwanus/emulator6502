@@ -19,7 +19,13 @@ static void Win32UpdateWindow(HDC hdc) {
   if (!gWindowsBitmapMemory) return;
 
   // Copy data from the machine's video memory to our "display"
-  CopyPixels(gWindowsBitmapMemory, gVideoMemory);
+  for (int y = 0; y < kWindowHeight; y++) {
+    for (int x = 0; x < kWindowWidth; x++) {
+      u8 *SrcPixel = gVideoMemory + kWindowWidth * y + x;
+      u32 *DestPixel = (u32 *)gWindowsBitmapMemory + (kWindowWidth * y + x);
+      *DestPixel = GetColor(*SrcPixel);
+    }
+  }
 
   StretchDIBits(hdc, 0, 0, kWindowWidth * SCREEN_ZOOM,
                 kWindowHeight * SCREEN_ZOOM,        // dest

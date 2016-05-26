@@ -41,17 +41,6 @@ inline u32 GetColor(u8 code) {
   return palette[code];
 }
 
-static void CopyPixels(void *BitmapMemory, u8 *VideoMemory) {
-  // Copy data from the machine's video memory to our "display"
-  for (int y = 0; y < kWindowHeight; y++) {
-    for (int x = 0; x < kWindowWidth; x++) {
-      u8 *SrcPixel = VideoMemory + kWindowWidth * y + x;
-      u32 *DestPixel = (u32 *)BitmapMemory + (kWindowWidth * y + x);
-      *DestPixel = GetColor(*SrcPixel);
-    }
-  }
-}
-
 #define FLAG_C 0x01
 #define FLAG_Z 0x02
 #define FLAG_I 0x04

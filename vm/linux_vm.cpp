@@ -14,8 +14,6 @@
 
 /*************** TODO *****************
 
-* stretch bits
-
 **************************************/
 
 global bool gRunning;
@@ -29,8 +27,8 @@ static void *machine_thread(void *arg) {
   CPU cpu = CPU();
   while (cpu.is_running) {
     cpu.Tick();
-    usleep(10);
   }
+  print("CPU has finished work\n");
 }
 
 int main(int argc, char const *argv[]) {
@@ -64,7 +62,6 @@ int main(int argc, char const *argv[]) {
   Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(display, window, &wmDeleteMessage, 1);
 
-  Pixmap pixmap;
   GC gc;
   XGCValues gcvalues;
 
@@ -76,8 +73,8 @@ int main(int argc, char const *argv[]) {
       if (e.type == MapNotify) break;
     }
 
-    gXImage = XGetImage(display, window, 0, 0, kWindowWidth, kWindowHeight,
-                        AllPlanes, ZPixmap);
+    gXImage = XGetImage(display, window, 0, 0, kWindowWidth * SCREEN_ZOOM,
+                        kWindowHeight * SCREEN_ZOOM, AllPlanes, ZPixmap);
 
     gLinuxBitmapMemory = (void *)gXImage->data;
 
@@ -114,9 +111,24 @@ int main(int argc, char const *argv[]) {
       }
     }
 
-    CopyPixels(gLinuxBitmapMemory, gVideoMemory);
-    XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
-              kWindowHeight);
+    // Copy data from the machine's video memory to our "display"
+    // and stretch pixels
+    for (int y = 0; y < kWindowHeight; y++) {
+      for (int x = 0; x < kWindowWidth; x++) {
+        u8 *src_pixel = gVideoMemory + kWindowWidth * y + x;
+        u32 *dest_pixel =
+            (u32 *)gLinuxBitmapMemory + (kWindowWidth * SCREEN_ZOOM * y + x) * SCREEN_ZOOM;
+        u32 color = GetColor(*src_pixel);
+        for (int py = 0; py < SCREEN_ZOOM; py++) {
+          for (int px = 0; px < SCREEN_ZOOM; px++) {
+            *(dest_pixel + py * kWindowWidth * SCREEN_ZOOM + px) = color;
+          }
+        }
+      }
+    }
+
+    XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth * SCREEN_ZOOM,
+              kWindowHeight * SCREEN_ZOOM);
   }
 
   XCloseDisplay(display);
