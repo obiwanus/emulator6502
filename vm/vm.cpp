@@ -278,8 +278,8 @@ void CPU::Tick() {
       this->SetC(tmp > this->A ? 1 : 0);
     } break;
     case I_AND: {
-      print("ERROR: instruction AND not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->A &= operand;
+      this->SetNZFor(this->A);
     } break;
     case I_ASL: {
       print("ERROR: instruction ASL not implemented. Opcode %#02x\n", opcode);
@@ -309,8 +309,8 @@ void CPU::Tick() {
       this->SetNZFor(*data_pointer);
     } break;
     case I_EOR: {
-      print("ERROR: instruction EOR not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      this->A ^= operand;
+      this->SetNZFor(this->A);
     } break;
     case I_INC: {
       *data_pointer = *data_pointer + 1;

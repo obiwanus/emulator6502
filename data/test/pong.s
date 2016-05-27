@@ -2,21 +2,22 @@ define  draw_cursor     $00
 define  draw_cursor_h   $01
 
 define  up    1
-define  down  2
-define  left  4
-define  right 8
+define  left  2
 define  ball_x      $02   // 2 bytes
+define  ball_x_h    $03
 define  ball_y      $04   // 1 byte
 define  ball_direction  $05
 define  ball_display    $06
 define  ball_display_h  $07
+define  max_y   191
+define  max_x_h 41    // = 279 - 256
 
 
   jsr init
 
 mainloop:
   jsr update_ball
-  jsr draw_separator
+  // jsr draw_separator
   jsr draw_ball
   jsr sleep   // TODO: sleep on "vblank"
   jmp mainloop
@@ -35,6 +36,32 @@ init:
 
 
 update_ball:
+  lda ball_direction
+  and up
+  bne move_up
+  inc ball_y  // move down
+  lda #max_y
+  cmp ball_y
+  beq bounce
+  jmp move_horiz
+move_up:
+  dec ball_y  // move up
+  bne move_horiz  // else bounce
+bounce:
+  lda ball_direction
+  eor up
+  sta ball_direction
+
+move_horiz:
+  lda ball_direction
+  and left
+  beq move_left
+  // move_right
+  jmp end_update_ball
+move_left:
+  // move_left
+
+end_update_ball:
   rts
 
 
