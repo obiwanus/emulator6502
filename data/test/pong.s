@@ -6,18 +6,22 @@ define  left  2
 define  ball_x      $02   // 2 bytes
 define  ball_x_h    $03
 define  ball_y      $04   // 1 byte
+define  ball_color  $0f   // white
 define  ball_direction  $05
 define  ball_display    $06
 define  ball_display_h  $07
 define  max_y   191
-define  max_x_h 41    // = 279 - 256
+define  max_x_l 23    // = 279 - 256
+define  screen_half_x   140
 
 
   jsr init
+  jsr draw_separator
+  jmp game_over
 
 mainloop:
   jsr update_ball
-  // jsr draw_separator
+  jsr draw_separator
   jsr draw_ball
   jsr sleep   // TODO: sleep on "vblank"
   jmp mainloop
@@ -32,6 +36,15 @@ init:
   lda #left
   ora #up
   sta ball_direction
+  jsr init_draw_cursor
+  rts
+
+
+init_draw_cursor:
+  lda #$00
+  sta draw_cursor
+  lda #$02
+  sta draw_cursor_h
   rts
 
 
@@ -66,31 +79,30 @@ end_update_ball:
 
 
 draw_separator:
-  // Init draw cursor
-  lda #0
-  sta draw_cursor
-  lda #2
-  sta draw_cursor_h
-
-  lda #140
+  define separator_color 10   // light grey
+  jsr init_draw_cursor
+  lda #screen_half_x
   sta draw_cursor // set draw cursor x to the middle of the screen
+  ldy #max_y
+
 draw_separator_loop:
-  lda #$c  // grey
+  lda #separator_color
   ldx #0
   sta (draw_cursor, x)  // draw pixel
   lda draw_cursor
   clc
-  adc #$40 // step two pixels down
+  adc #24
   sta draw_cursor
-  bcc draw_separator_loop // continue until overflow
-  inc draw_cursor_h
   lda draw_cursor_h
-  cmp #$6
-  bne draw_separator_loop // continue until less than 6
+  adc #1
+  sta draw_cursor_h
+  dey
+  bne draw_separator_loop // continue Y times
   rts
 
 
 draw_ball:
+
   rts
 
 
