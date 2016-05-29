@@ -368,8 +368,8 @@ void CPU::Tick() {
       exit(1);
     } break;
     case I_BRK: {
-      print("ERROR: instruction BRK not implemented. Opcode %#02x\n", opcode);
-      exit(1);
+      // For debugging
+      int debug = 1;
     } break;
     case I_CLC: {
       this->SetC(0);

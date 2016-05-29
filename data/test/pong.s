@@ -10,7 +10,7 @@ define  ball_color  $0f   // white
 define  ball_direction  $05
 define  ball_display    $06
 define  ball_display_h  $07
-define  max_y   191
+define  max_y   192
 define  max_x_l 23    // = 279 - 256
 define  screen_half_x   140
 
@@ -83,7 +83,7 @@ draw_separator:
   jsr init_draw_cursor
   lda #screen_half_x
   sta draw_cursor // set draw cursor x to the middle of the screen
-  ldy #max_y
+  ldy #96
 
 draw_separator_loop:
   lda #separator_color
@@ -91,13 +91,14 @@ draw_separator_loop:
   sta (draw_cursor, x)  // draw pixel
   lda draw_cursor
   clc
-  adc #24
+  adc #48
   sta draw_cursor
   lda draw_cursor_h
-  adc #1
+  adc #2
   sta draw_cursor_h
   dey
   bne draw_separator_loop // continue Y times
+  brk
   rts
 
 
